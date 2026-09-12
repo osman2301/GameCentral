@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>GameCentral | Find Your Next Game</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+</head>
+
+
+<body>
+
+    <!-- =========================================
+         NAVIGATION
+    ========================================== -->
+
+    <header class="navbar">
+
+        <div class="nav-container">
+
+            <a href="{{ url_for('home') }}" class="logo">
+
+                <div class="logo-icon">
+                    G
+                </div>
+
+                <span>
+                    Game<span>Central</span>
+                </span>
+
+            </a>
+
+
+            <nav class="nav-links">
+
+                <a
+                    href="{{ url_for('home') }}"
+                    class="active"
+                >
+                    Home
+                </a>
+
+                <a href="#">
+                    My Library
+                </a>
+
+                <a href="#">
+                    Preferences
+                </a>
+
+                <a href="#">
+                    Platforms
+                </a>
+
+            </nav>
+
+
+            <div class="nav-buttons">
+
+                <a href="#" class="login-link">
+                    Log In
+                </a>
+
+                <a href="#" class="signup-button">
+                    Get Started
+                </a>
+
+            </div>
+
+        </div>
+
+    </header>
+
+
+
+    <!-- =========================================
+         MAIN CONTENT
+    ========================================== -->
+
+    <main>
+
+
+        <!-- =====================================
+             HERO SECTION
+        ====================================== -->
+
+        <section class="hero">
+
+            <div class="page-container hero-grid">
+
+
+                <!-- LEFT SIDE -->
+
+                <div class="hero-content">
+
+                    <div class="hero-badge">
+                        YOUR GAMES. ONE PLACE.
+                    </div>
+
+
+                    <h1>
+                        Stop scrolling.
+                        <span>Start playing.</span>
+                    </h1>
+
+
+                    <p class="hero-description">
+                        GameCentral brings your game libraries together
+                        so you can quickly find the right game based on
+                        what you actually want to play.
+                    </p>
+
+
+                    <div class="hero-buttons">
+
+                        <a
+                            href="#how-it-works"
+                            class="primary-button"
+                        >
+                            Find My Game
+
+                            <span>
+                                →
+                            </span>
+                        </a>
+
+
+                        <a
+                            href="#library-preview"
+                            class="secondary-button"
+                        >
+                            View My Library
+                        </a>
+
+                    </div>
+
+
+                    <div class="hero-features">
+
+                        <div>
+                            <span>✓</span>
+                            Multiple platforms
+                        </div>
+
+                        <div>
+                            <span>✓</span>
+                            Preference filters
+                        </div>
+
+                        <div>
+                            <span>✓</span>
+                            One library
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- RIGHT SIDE / LIBRARY CARD -->
+
+                <div
+                    class="library-card"
+                    id="library-preview"
+                >
+
+                    <div class="library-header">
+
+                        <div>
+
+                            <p class="small-heading">
+                                YOUR LIBRARY
+                            </p>
+
+                            <h2>
+                                Welcome Back
+                            </h2>
+
+                        </div>
+
+
+                        <div class="connection-status">
+
+                            <span class="status-dot"></span>
+
+                            Connected
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- LIBRARY STATS -->
+
+                    <div class="library-stats">
+
+                        <div class="stat">
+
+                            <strong>
+                                128
+                            </strong>
+
+                            <span>
+                                Games
+                            </span>
+
+                        </div>
+
+
+                        <div class="stat">
+
+                            <strong>
+                                4
+                            </strong>
+
+                            <span>
+                                Platforms
+                            </span>
+
+                        </div>
+
+
+                        <div class="stat">
+
+                            <strong>
+                                36
+                            </strong>
+
+                            <span>
+                                Unplayed
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- GAME LIST HEADING -->
+
+                    <div class="game-list-heading">
+
+                        <h3>
+                            Recommended for you
+                        </h3>
+
+                        <a href="#">
+                            View All
+                        </a>
+
+                    </div>
+
+
+
+                    <!-- GAME 1 -->
+
+                    <div class="game-card">
+
+                        <div class="game-image game-purple">
+                            01
+                        </div>
+
+
+                        <div class="game-info">
+
+                            <h4>
+                                Outer Kingdoms
+                            </h4>
+
+                            <p>
+                                Adventure • Single Player
+                            </p>
+
+                        </div>
+
+
+                        <span class="platform-name">
+                            STEAM
+                        </span>
+
+                    </div>
+
+
+
+                    <!-- GAME 2 -->
+
+                    <div class="game-card">
+
+                        <div class="game-image game-blue">
+                            02
+                        </div>
+
+
+                        <div class="game-info">
+
+                            <h4>
+                                Lost Horizon
+                            </h4>
+
+                            <p>
+                                RPG • Open World
+                            </p>
+
+                        </div>
+
+
+                        <span class="platform-name">
+                            EPIC
+                        </span>
+
+                    </div>
+
+
+
+                    <!-- GAME 3 -->
+
+                    <div class="game-card">
+
+                        <div class="game-image game-orange">
+                            03
+                        </div>
+
+
+                        <div class="game-info">
+
+                            <h4>
+                                Iron Command
+                            </h4>
+
+                            <p>
+                                Strategy • Multiplayer
+                            </p>
+
+                        </div>
+
+
+                        <span class="platform-name">
+                            XBOX
+                        </span>
+
+                    </div>
+
+
+
+                    <a href="#" class="library-action">
+
+                        Find Something to Play
+
+                        <span>
+                            →
+                        </span>
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================
+             HOW IT WORKS
+        ====================================== -->
+
+        <section
+            class="how-it-works"
+            id="how-it-works"
+        >
+
+            <div class="page-container">
+
+
+                <div class="section-heading">
+
+                    <p>
+                        HOW IT WORKS
+                    </p>
+
+
+                    <h2>
+                        From a huge library
+                        <span>
+                            to your next game.
+                        </span>
+                    </h2>
+
+
+                    <div class="heading-description">
+
+                        GameCentral helps you narrow down your
+                        collection in three simple steps.
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="steps-grid">
+
+
+                    <!-- STEP 1 -->
+
+                    <article class="step-card">
+
+                        <div class="step-top">
+
+                            <div class="step-icon">
+                                +
+                            </div>
+
+                            <span>
+                                01
+                            </span>
+
+                        </div>
+
+
+                        <h3>
+                            Connect Platforms
+                        </h3>
+
+
+                        <p>
+                            Add your gaming platforms and bring
+                            games from different services into
+                            one central library.
+                        </p>
+
+
+                        <a href="#">
+                            Connect accounts →
+                        </a>
+
+                    </article>
+
+
+
+                    <!-- STEP 2 -->
+
+                    <article class="step-card">
+
+                        <div class="step-top">
+
+                            <div class="step-icon">
+                                ≡
+                            </div>
+
+                            <span>
+                                02
+                            </span>
+
+                        </div>
+
+
+                        <h3>
+                            Set Preferences
+                        </h3>
+
+
+                        <p>
+                            Choose what you are in the mood for
+                            using filters based on your gaming
+                            preferences.
+                        </p>
+
+
+                        <a href="#">
+                            Set preferences →
+                        </a>
+
+                    </article>
+
+
+
+                    <!-- STEP 3 -->
+
+                    <article class="step-card featured-step">
+
+                        <div class="step-top">
+
+                            <div class="step-icon">
+                                ★
+                            </div>
+
+                            <span>
+                                03
+                            </span>
+
+                        </div>
+
+
+                        <h3>
+                            Find Your Game
+                        </h3>
+
+
+                        <p>
+                            GameCentral compares your choices
+                            against your library and shows games
+                            that match your preferences.
+                        </p>
+
+
+                        <a href="#">
+                            Find my game →
+                        </a>
+
+                    </article>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================
+             LIBRARY SECTION
+        ====================================== -->
+
+        <section class="library-section">
+
+            <div class="page-container library-section-grid">
+
+
+                <!-- LEFT -->
+
+                <div class="library-text">
+
+                    <p class="section-label">
+                        ONE CENTRAL LIBRARY
+                    </p>
+
+
+                    <h2>
+                        Your games.
+                        <span>
+                            All in one place.
+                        </span>
+                    </h2>
+
+
+                    <p class="library-description">
+                        Stop switching between gaming platforms
+                        just to remember what you own. GameCentral
+                        is designed to bring your collection together
+                        and make it easier to decide what to play.
+                    </p>
+
+
+                    <a href="#" class="primary-button">
+
+                        Explore Library
+
+                        <span>
+                            →
+                        </span>
+
+                    </a>
+
+                </div>
+
+
+
+                <!-- RIGHT -->
+
+                <div class="platform-list">
+
+
+                    <div class="platform-card">
+
+                        <div class="platform-icon">
+                            S
+                        </div>
+
+
+                        <div class="platform-info">
+
+                            <h3>
+                                Steam
+                            </h3>
+
+                            <p>
+                                56 games
+                            </p>
+
+                        </div>
+
+
+                        <span class="connected-check">
+                            ✓
+                        </span>
+
+                    </div>
+
+
+
+                    <div class="platform-card">
+
+                        <div class="platform-icon">
+                            E
+                        </div>
+
+
+                        <div class="platform-info">
+
+                            <h3>
+                                Epic Games
+                            </h3>
+
+                            <p>
+                                31 games
+                            </p>
+
+                        </div>
+
+
+                        <span class="connected-check">
+                            ✓
+                        </span>
+
+                    </div>
+
+
+
+                    <div class="platform-card">
+
+                        <div class="platform-icon">
+                            X
+                        </div>
+
+
+                        <div class="platform-info">
+
+                            <h3>
+                                Xbox
+                            </h3>
+
+                            <p>
+                                24 games
+                            </p>
+
+                        </div>
+
+
+                        <span class="connected-check">
+                            ✓
+                        </span>
+
+                    </div>
+
+
+
+                    <div class="platform-card">
+
+                        <div class="platform-icon">
+                            P
+                        </div>
+
+
+                        <div class="platform-info">
+
+                            <h3>
+                                PlayStation
+                            </h3>
+
+                            <p>
+                                17 games
+                            </p>
+
+                        </div>
+
+
+                        <span class="connected-check">
+                            ✓
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================
+             FILTER PREVIEW
+        ====================================== -->
+
+        <section class="filter-section">
+
+            <div class="page-container">
+
+
+                <div class="section-heading">
+
+                    <p>
+                        PERSONALIZED FILTERING
+                    </p>
+
+
+                    <h2>
+                        What do you feel like
+                        <span>
+                            playing today?
+                        </span>
+                    </h2>
+
+                </div>
+
+
+
+                <div class="filter-box">
+
+
+                    <div class="filter-group">
+
+                        <p>
+                            GENRE
+                        </p>
+
+
+                        <div class="filter-options">
+
+                            <button class="filter-option selected">
+                                RPG
+                            </button>
+
+                            <button class="filter-option">
+                                Adventure
+                            </button>
+
+                            <button class="filter-option">
+                                Strategy
+                            </button>
+
+                            <button class="filter-option">
+                                Action
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="filter-group">
+
+                        <p>
+                            PLAY STYLE
+                        </p>
+
+
+                        <div class="filter-options">
+
+                            <button class="filter-option selected">
+                                Single Player
+                            </button>
+
+                            <button class="filter-option">
+                                Multiplayer
+                            </button>
+
+                            <button class="filter-option">
+                                Co-op
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="filter-group">
+
+                        <p>
+                            TIME AVAILABLE
+                        </p>
+
+
+                        <div class="filter-options">
+
+                            <button class="filter-option">
+                                Under 1 Hour
+                            </button>
+
+                            <button class="filter-option selected">
+                                1–3 Hours
+                            </button>
+
+                            <button class="filter-option">
+                                No Limit
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <a href="#" class="filter-search-button">
+
+                        Show Matching Games
+
+                        <span>
+                            →
+                        </span>
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================
+             CALL TO ACTION
+        ====================================== -->
+
+        <section class="cta-section">
+
+            <div class="page-container">
+
+                <div class="cta-box">
+
+                    <p>
+                        READY TO PLAY?
+                    </p>
+
+
+                    <h2>
+                        Less time choosing.
+                        <span>
+                            More time gaming.
+                        </span>
+                    </h2>
+
+
+                    <div class="cta-description">
+                        Let GameCentral narrow down your library
+                        and help you find something worth playing.
+                    </div>
+
+
+                    <a href="#" class="cta-button">
+
+                        Get Started
+
+                        <span>
+                            →
+                        </span>
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+
+    <!-- =========================================
+         FOOTER
+    ========================================== -->
+
+    <footer>
+
+        <div class="page-container footer-container">
+
+
+            <div class="footer-brand">
+
+                <div class="footer-logo">
+                    G
+                </div>
+
+
+                <div>
+
+                    <strong>
+                        GameCentral
+                    </strong>
+
+                    <p>
+                        Video Game Library Navigator
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <p class="footer-middle">
+                Find the game worth your time.
+            </p>
+
+
+            <p class="footer-right">
+                Team Gamma
+            </p>
+
+        </div>
+
+    </footer>
+
+
+</body>
+
+</html>
