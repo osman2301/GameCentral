@@ -71,7 +71,7 @@ No JavaScript framework or database is required for the current prototype.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 The project currently uses the following structure:
 
