@@ -1,4 +1,4 @@
-# 🎮 GameCentral
+# GameCentral
 
 **GameCentral** is a video game library navigator designed to help players with large, multi-platform game collections decide what to play.
 
@@ -6,7 +6,7 @@ Instead of searching through several gaming platforms, GameCentral aims to bring
 
 ---
 
-## 📌 Project Overview
+## Project Overview
 
 Players with large game collections can spend too much time deciding what to play, especially when their games are spread across multiple platforms.
 
@@ -22,7 +22,7 @@ The current version of GameCentral is an early **front-end prototype** running o
 
 ---
 
-## 🎯 Project Goal
+## Project Goal
 
 The main goal of GameCentral is to reduce the time players spend searching through their libraries.
 
@@ -36,7 +36,7 @@ The intended workflow is:
 
 ---
 
-## ✨ Current Prototype
+## Current Prototype
 
 The current homepage includes:
 
@@ -56,7 +56,7 @@ The current homepage includes:
 
 ---
 
-## 🖥️ Technologies Used
+## Technologies Used
 
 GameCentral currently uses:
 
@@ -99,7 +99,7 @@ GameCentral/
 
 ---
 
-# 🚀 Getting Started
+# Getting Started
 
 Follow the steps below to run GameCentral on your computer.
 
@@ -247,7 +247,7 @@ The GameCentral homepage should now be running locally.
 
 ---
 
-# 🧭 Using the Current Prototype
+# Using the Current Prototype
 
 ## Quick Find
 
@@ -295,7 +295,7 @@ Future versions can replace these placeholders with actual platform integrations
 
 ---
 
-# 📋 Current Project Scope
+# Current Project Scope
 
 The current capstone scope focuses on:
 
@@ -315,7 +315,7 @@ The project does **not** currently focus on:
 
 ---
 
-# 🔄 Intended User Flow
+# Intended User Flow
 
 A typical GameCentral user should eventually be able to:
 
@@ -333,276 +333,3 @@ View Matching Games
 Choose What to Play
 ```
 
----
-
-# 🌿 Git and GitHub Workflow
-
-## First-Time Git Setup
-
-If the project folder has not been initialized with Git yet:
-
-```bash
-git init
-```
-
-Add all project files:
-
-```bash
-git add .
-```
-
-Create the first commit:
-
-```bash
-git commit -m "Initial GameCentral project"
-```
-
-Make sure the branch is named `main`:
-
-```bash
-git branch -M main
-```
-
-Connect the local project to GitHub:
-
-```bash
-git remote add origin https://github.com/osman2301/GameCentral.git
-```
-
-Then push the project:
-
-```bash
-git push -u origin main
-```
-
----
-
-## Updating GitHub After Making Changes
-
-After editing the project, check which files changed:
-
-```bash
-git status
-```
-
-Add the changes:
-
-```bash
-git add .
-```
-
-Commit them:
-
-```bash
-git commit -m "Update GameCentral homepage"
-```
-
-Push them to GitHub:
-
-```bash
-git push
-```
-
-A normal update workflow is therefore:
-
-```bash
-git add .
-git commit -m "Describe the changes"
-git push
-```
-
----
-
-# 🔐 GitHub Authentication
-
-GitHub no longer accepts normal account passwords for command-line Git operations over HTTPS.
-
-If GitHub asks for authentication, use:
-
-- Your GitHub username
-- A GitHub Personal Access Token instead of your normal password
-
-If you see:
-
-```text
-Password authentication is not supported for Git operations
-```
-
-you need to authenticate using a Personal Access Token or another supported GitHub authentication method.
-
----
-
-# 🛠️ Troubleshooting
-
-## `ModuleNotFoundError: No module named 'flask'`
-
-Install Flask:
-
-```bash
-pip install flask
-```
-
-or:
-
-```bash
-pip3 install flask
-```
-
-Then run the application again.
-
----
-
-## `python: command not found`
-
-Try:
-
-```bash
-python3 app.py
-```
-
-instead of:
-
-```bash
-python app.py
-```
-
----
-
-## CSS Is Not Loading
-
-Make sure the project structure contains:
-
-```text
-static/
-└── style.css
-```
-
-The HTML should load the stylesheet using Flask:
-
-```html
-<link
-    rel="stylesheet"
-    href="{{ url_for('static', filename='style.css') }}"
->
-```
-
----
-
-## Flask Cannot Find `index.html`
-
-GameCentral currently keeps `index.html` in the root project directory instead of a `templates` folder.
-
-Because of that, `app.py` should contain:
-
-```python
-app = Flask(
-    __name__,
-    template_folder=".",
-    static_folder="static"
-)
-```
-
----
-
-## Port 5000 Is Already Being Used
-
-If another program is using port `5000`, change the port in `app.py`.
-
-For example:
-
-```python
-app.run(debug=True, port=5001)
-```
-
-Then open:
-
-```text
-http://127.0.0.1:5001
-```
-
----
-
-## Git Says `nothing to commit, working tree clean`
-
-This means all current changes have already been committed.
-
-It is not an error.
-
-You can check your commits with:
-
-```bash
-git log --oneline
-```
-
----
-
-## Git Says `no upstream branch`
-
-Run:
-
-```bash
-git push -u origin main
-```
-
-After the upstream branch is configured, future pushes can normally use:
-
-```bash
-git push
-```
-
----
-
-# 🔮 Future Development
-
-Planned or possible future improvements include:
-
-- Functional preference filtering
-- Real game metadata
-- Database support
-- User accounts
-- Saved player preferences
-- Platform API integration
-- Imported game libraries
-- Search functionality
-- Game details pages
-- Library sorting
-- Game tags
-- Filtered recommendation results
-- Additional pages for Library, Platforms, and Account settings
-
----
-
-# 🧩 Preliminary Domain
-
-The project currently centers around several main concepts:
-
-- **Player**
-- **Player Preference**
-- **Library**
-- **Game Platform**
-- **Game**
-
-A player's preferences are intended to filter the games available through their combined library.
-
----
-
-# 📍 Project Status
-
-**Current stage:** Prototype
-
-The current focus is building and improving the GameCentral front-end experience before implementing the full filtering and platform integration functionality.
-
----
-
-# 👥 Team
-
-**Team Gamma**
-
----
-
-# 🎓 Project
-
-**Capstone Project**  
-**Video Game Library Navigator**
-
-GameCentral is being developed as a capstone project focused on making large video game libraries easier to navigate and helping players spend less time deciding what to play.
