@@ -145,45 +145,7 @@ cd GameCentral
 
 ---
 
-## 3. Create a Virtual Environment
-
-Creating a virtual environment is recommended so the project dependencies stay separate from other Python projects.
-
-On macOS or Linux:
-
-```bash
-python3 -m venv venv
-```
-
-Activate it:
-
-```bash
-source venv/bin/activate
-```
-
-On Windows:
-
-```bash
-python -m venv venv
-```
-
-Activate it with:
-
-```bash
-venv\Scripts\activate
-```
-
-After activation, your terminal may show:
-
-```text
-(venv)
-```
-
-before the folder name.
-
----
-
-## 4. Install Project Requirements
+## 3. Install Project Requirements
 
 Install the required Python packages:
 
@@ -247,22 +209,6 @@ The GameCentral homepage should now be running locally.
 
 ---
 
-# Using the Current Prototype
-
-## Quick Find
-
-The **Quick Find** section allows the player to select:
-
-- Genre
-- Play style
-- Time available
-
-The intended final behavior is for GameCentral to use these selections to filter the player's library.
-
-At the current prototype stage, these controls are visual and do not yet perform backend filtering.
-
----
-
 ## Library
 
 The **Library** section demonstrates how games could be displayed after being imported into GameCentral.
@@ -295,25 +241,6 @@ Future versions can replace these placeholders with actual platform integrations
 
 ---
 
-# Current Project Scope
-
-The current capstone scope focuses on:
-
-- Combining a player's game library from multiple sources
-- Allowing players to set filtering preferences
-- Filtering games based on those preferences
-- Returning a smaller list of suitable games
-
-The project does **not** currently focus on:
-
-- Installing games
-- Launching games
-- Chat features
-- Social networking
-- Group game selection
-- Customer game reviews
-
----
 
 # Intended User Flow
 
