@@ -1,879 +1,480 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GameCentral</title>
-
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', filename='style.css') }}"
-    >
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Shown when the database has no games yet. Move to style.css if you like. */
+        .empty-state {
+            color: #8f98a0;
+            font-size: 14px;
+            padding: 16px 0;
+            margin: 0;
+        }
+    </style>
 </head>
-
 <body>
 
-    <!-- =========================================
-         TOP NAVIGATION
-    ========================================== -->
-
+    <!-- TOP NAVIGATION -->
     <header class="topbar">
-
         <div class="topbar-left">
-
-            <a href="{{ url_for('home') }}" class="brand">
+            <a href="index.html" class="brand">
                 <div class="brand-icon">G</div>
                 <span>GameCentral</span>
             </a>
-
             <nav class="main-nav">
-                <a href="#">Store</a>
-                <a href="{{ url_for('home') }}" class="active">Library</a>
-                <a href="#">Community</a>
+                <a href="index.html" class="active">Library</a>
             </nav>
-
         </div>
-
 
         <div class="topbar-right">
-
-            <button class="install-button">
-                + Add Game
-            </button>
-
-            <a href="#" class="profile-link">
-                Player
-            </a>
-
+            <button class="install-button" id="open-add-game">+ Add Game</button>
+            <a href="#" class="profile-link">User</a>
         </div>
-
     </header>
 
-
-
-    <!-- =========================================
-         APPLICATION LAYOUT
-    ========================================== -->
-
+    <!-- APPLICATION LAYOUT -->
     <div class="app-layout">
 
-
-        <!-- =====================================
-             LEFT SIDEBAR
-        ====================================== -->
-
+        <!-- LEFT SIDEBAR -->
         <aside class="sidebar">
-
             <div class="sidebar-top">
-
                 <div class="library-heading">
                     <span>LIBRARY</span>
-                    <button>+</button>
+                    <button id="open-add-game-small">+</button>
                 </div>
-
                 <div class="search-box">
                     <span>⌕</span>
-
-                    <input
-                        type="text"
-                        placeholder="Search games"
-                    >
+                    <input type="text" id="search-input" placeholder="Search games" aria-label="Search games" autocomplete="off">
                 </div>
-
                 <div class="sidebar-filter-row">
-
-                    <button class="filter-small active">
-                        Games
-                    </button>
-
-                    <button class="filter-small">
-                        Installed
-                    </button>
-
+                    <button class="filter-small active">Games</button>
+                    <button class="filter-small">Installed</button>
                 </div>
-
             </div>
 
-
-            <div class="game-list">
-
-                <a href="#" class="sidebar-game selected">
-
-                    <div class="sidebar-game-icon icon-blue">
-                        OK
-                    </div>
-
-                    <div class="sidebar-game-info">
-                        <strong>Outer Kingdoms</strong>
-                        <span>Steam</span>
-                    </div>
-
-                </a>
-
-
-                <a href="#" class="sidebar-game">
-
-                    <div class="sidebar-game-icon icon-teal">
-                        LH
-                    </div>
-
-                    <div class="sidebar-game-info">
-                        <strong>Lost Horizon</strong>
-                        <span>Epic Games</span>
-                    </div>
-
-                </a>
-
-
-                <a href="#" class="sidebar-game">
-
-                    <div class="sidebar-game-icon icon-orange">
-                        IC
-                    </div>
-
-                    <div class="sidebar-game-info">
-                        <strong>Iron Command</strong>
-                        <span>Xbox</span>
-                    </div>
-
-                </a>
-
-
-                <a href="#" class="sidebar-game">
-
-                    <div class="sidebar-game-icon icon-purple">
-                        NF
-                    </div>
-
-                    <div class="sidebar-game-info">
-                        <strong>Nightfall</strong>
-                        <span>PlayStation</span>
-                    </div>
-
-                </a>
-
-
-                <a href="#" class="sidebar-game">
-
-                    <div class="sidebar-game-icon icon-green">
-                        EV
-                    </div>
-
-                    <div class="sidebar-game-info">
-                        <strong>Evervale</strong>
-                        <span>Steam</span>
-                    </div>
-
-                </a>
-
-
-                <a href="#" class="sidebar-game">
-
-                    <div class="sidebar-game-icon icon-red">
-                        FS
-                    </div>
-
-                    <div class="sidebar-game-info">
-                        <strong>Fallen Skies</strong>
-                        <span>Steam</span>
-                    </div>
-
-                </a>
-
-
-                <a href="#" class="sidebar-game">
-
-                    <div class="sidebar-game-icon icon-gold">
-                        KR
-                    </div>
-
-                    <div class="sidebar-game-info">
-                        <strong>Kingdom Reborn</strong>
-                        <span>Xbox</span>
-                    </div>
-
-                </a>
-
-            </div>
-
+            <div class="game-list" id="game-list"></div>
         </aside>
 
-
-
-        <!-- =====================================
-             MAIN LIBRARY
-        ====================================== -->
-
+        <!-- MAIN LIBRARY -->
         <main class="library-main">
 
-
-            <!-- ===============================
-                 LIBRARY HEADER
-            ================================ -->
-
             <section class="library-toolbar">
-
                 <div>
-
-                    <p class="small-title">
-                        GAMECENTRAL
-                    </p>
-
-                    <h1>
-                        Library Home
-                    </h1>
-
+                    <p class="small-title">GAMECENTRAL</p>
+                    <h1>Library Home</h1>
                 </div>
-
-
                 <div class="toolbar-actions">
-
-                    <button class="toolbar-button">
-                        Recently Played
-                    </button>
-
-                    <button class="toolbar-icon-button">
-                        ▦
-                    </button>
-
+                    <button class="toolbar-button">Recently Played</button>
+                    <button class="toolbar-icon-button">▦</button>
                 </div>
-
             </section>
 
-
-
-            <!-- ===============================
-                 RECENT GAME
-            ================================ -->
-
+            <!-- RECENT GAME -->
             <section class="recent-section">
-
                 <div class="section-title-row">
-
-                    <h2>
-                        Recent Games
-                    </h2>
-
-                    <a href="#">
-                        View All
-                    </a>
-
+                    <h2>Recent Games</h2>
+                    <a href="#">View All</a>
                 </div>
-
-
-                <article class="featured-game">
-
+                <p class="empty-state" id="featured-empty">No games yet. Click “+ Add Game” to add your first one.</p>
+                <article class="featured-game" id="featured-game" style="display: none;">
                     <div class="featured-art">
-
                         <div class="art-content">
-
-                            <span class="featured-category">
-                                ADVENTURE
-                            </span>
-
-                            <h2>
-                                Outer Kingdoms
-                            </h2>
-
-                            <p>
-                                Continue exploring your latest adventure.
-                            </p>
-
+                            <span class="featured-category"></span>
+                            <h2></h2>
+                            <p></p>
                         </div>
-
                     </div>
-
-
                     <div class="featured-bottom">
-
                         <div class="featured-details">
-
-                            <p>
-                                LAST PLAYED
-                            </p>
-
-                            <strong>
-                                Today
-                            </strong>
-
+                            <p>LAST PLAYED</p>
+                            <strong>Never</strong>
                         </div>
-
-
                         <div class="featured-details">
-
-                            <p>
-                                PLAY TIME
-                            </p>
-
-                            <strong>
-                                24.6 hours
-                            </strong>
-
+                            <p>PLAY TIME</p>
+                            <strong>0 hours</strong>
                         </div>
-
-
-                        <button class="play-button">
-                            ▶ Play
-                        </button>
-
+                        <button class="play-button">▶ Play</button>
                     </div>
-
                 </article>
-
             </section>
 
-
-
-            <!-- ===============================
-                 RECENT SHELF
-            ================================ -->
-
+            <!-- RECENT SHELF -->
             <section class="shelf-section">
-
                 <div class="section-title-row">
-
-                    <h2>
-                        Recently Added
-                    </h2>
-
-                    <a href="#">
-                        See All
-                    </a>
-
+                    <h2>Recently Added</h2>
+                    <a href="#">See All</a>
                 </div>
-
-
-                <div class="game-shelf">
-
-
-                    <article class="library-game-card">
-
-                        <div class="library-cover cover-one">
-
-                            <div class="cover-title">
-                                Lost Horizon
-                            </div>
-
-                        </div>
-
-                        <div class="library-game-details">
-
-                            <h3>
-                                Lost Horizon
-                            </h3>
-
-                            <p>
-                                Epic Games
-                            </p>
-
-                        </div>
-
-                    </article>
-
-
-
-                    <article class="library-game-card">
-
-                        <div class="library-cover cover-two">
-
-                            <div class="cover-title">
-                                Iron Command
-                            </div>
-
-                        </div>
-
-                        <div class="library-game-details">
-
-                            <h3>
-                                Iron Command
-                            </h3>
-
-                            <p>
-                                Xbox
-                            </p>
-
-                        </div>
-
-                    </article>
-
-
-
-                    <article class="library-game-card">
-
-                        <div class="library-cover cover-three">
-
-                            <div class="cover-title">
-                                Nightfall
-                            </div>
-
-                        </div>
-
-                        <div class="library-game-details">
-
-                            <h3>
-                                Nightfall
-                            </h3>
-
-                            <p>
-                                PlayStation
-                            </p>
-
-                        </div>
-
-                    </article>
-
-
-
-                    <article class="library-game-card">
-
-                        <div class="library-cover cover-four">
-
-                            <div class="cover-title">
-                                Evervale
-                            </div>
-
-                        </div>
-
-                        <div class="library-game-details">
-
-                            <h3>
-                                Evervale
-                            </h3>
-
-                            <p>
-                                Steam
-                            </p>
-
-                        </div>
-
-                    </article>
-
-                </div>
-
+                <div class="game-shelf" id="game-shelf"></div>
             </section>
 
-
-
-            <!-- ===============================
-                 FIND A GAME
-            ================================ -->
-
-            <section
-                class="find-section"
-                id="find-game"
-            >
-
+            <!-- FIND A GAME -->
+            <section class="find-section" id="find-game">
                 <div class="section-title-row">
-
                     <div>
-                        <h2>
-                            Find Something to Play
-                        </h2>
-
-                        <p>
-                            Narrow your library based on what
-                            you're looking for.
-                        </p>
+                        <h2>Find Something to Play</h2>
+                        <p>Narrow your library based on what you're looking for.</p>
                     </div>
-
                 </div>
-
-
                 <div class="filter-panel">
-
-
                     <div class="filter-field">
-
-                        <label for="genre">
-                            Genre
-                        </label>
-
+                        <label for="genre">Genre</label>
                         <select id="genre">
-
-                            <option>
-                                Any Genre
-                            </option>
-
-                            <option>
-                                Action
-                            </option>
-
-                            <option>
-                                Adventure
-                            </option>
-
-                            <option>
-                                RPG
-                            </option>
-
-                            <option>
-                                Strategy
-                            </option>
-
-                            <option>
-                                Simulation
-                            </option>
-
+                            <option>Any Genre</option>
+                            <option>Action</option>
+                            <option>Adventure</option>
+                            <option>RPG</option>
+                            <option>Strategy</option>
+                            <option>Simulation</option>
                         </select>
-
                     </div>
-
-
-
                     <div class="filter-field">
-
-                        <label for="play-style">
-                            Play Style
-                        </label>
-
+                        <label for="play-style">Play Style</label>
                         <select id="play-style">
-
-                            <option>
-                                Any Style
-                            </option>
-
-                            <option>
-                                Single Player
-                            </option>
-
-                            <option>
-                                Multiplayer
-                            </option>
-
-                            <option>
-                                Co-op
-                            </option>
-
+                            <option>Any Style</option>
+                            <option>Single Player</option>
+                            <option>Multiplayer</option>
+                            <option>Co-op</option>
                         </select>
-
                     </div>
-
-
-
                     <div class="filter-field">
-
-                        <label for="time">
-                            Time Available
-                        </label>
-
+                        <label for="time">Time Available</label>
                         <select id="time">
-
-                            <option>
-                                Any Amount
-                            </option>
-
-                            <option>
-                                Under 1 Hour
-                            </option>
-
-                            <option>
-                                1–3 Hours
-                            </option>
-
-                            <option>
-                                3+ Hours
-                            </option>
-
+                            <option>Any Amount</option>
+                            <option>Under 1 Hour</option>
+                            <option>1–3 Hours</option>
+                            <option>3+ Hours</option>
                         </select>
-
                     </div>
-
-
-                    <button class="match-button">
-                        Find Games
-                    </button>
-
+                    <button class="match-button" id="find-games-button">Find Games</button>
                 </div>
-
             </section>
 
 
-
-            <!-- ===============================
-                 CONNECTED PLATFORMS
-            ================================ -->
-
-            <section class="platform-section">
-
-                <div class="section-title-row">
-
-                    <div>
-
-                        <h2>
-                            Platforms
-                        </h2>
-
-                        <p>
-                            Game libraries connected to GameCentral.
-                        </p>
-
-                    </div>
-
-                    <button class="manage-button">
-                        Manage
-                    </button>
-
-                </div>
-
-
-                <div class="platform-grid">
-
-
-                    <article class="platform-card">
-
-                        <div class="platform-logo">
-                            S
-                        </div>
-
-                        <div class="platform-card-info">
-
-                            <h3>
-                                Steam
-                            </h3>
-
-                            <p>
-                                Connected
-                            </p>
-
-                        </div>
-
-                        <span class="status-dot"></span>
-
-                    </article>
-
-
-
-                    <article class="platform-card">
-
-                        <div class="platform-logo">
-                            E
-                        </div>
-
-                        <div class="platform-card-info">
-
-                            <h3>
-                                Epic Games
-                            </h3>
-
-                            <p>
-                                Connected
-                            </p>
-
-                        </div>
-
-                        <span class="status-dot"></span>
-
-                    </article>
-
-
-
-                    <article class="platform-card">
-
-                        <div class="platform-logo">
-                            X
-                        </div>
-
-                        <div class="platform-card-info">
-
-                            <h3>
-                                Xbox
-                            </h3>
-
-                            <p>
-                                Connected
-                            </p>
-
-                        </div>
-
-                        <span class="status-dot"></span>
-
-                    </article>
-
-
-
-                    <article class="platform-card">
-
-                        <div class="platform-logo">
-                            P
-                        </div>
-
-                        <div class="platform-card-info">
-
-                            <h3>
-                                PlayStation
-                            </h3>
-
-                            <p>
-                                Not connected
-                            </p>
-
-                        </div>
-
-                        <button class="connect-button">
-                            Connect
-                        </button>
-
-                    </article>
-
-
-                </div>
-
-            </section>
-
-
-
-            <!-- ===============================
-                 ALL GAMES
-            ================================ -->
-
+            <!-- ALL GAMES -->
             <section class="all-games-section">
-
                 <div class="section-title-row">
-
-                    <h2>
-                        All Games
-                    </h2>
-
+                    <h2>All Games</h2>
                     <div class="sort-area">
-
-                        <span>
-                            Sort by
-                        </span>
-
+                        <span>Sort by</span>
                         <select>
-
-                            <option>
-                                Recent
-                            </option>
-
-                            <option>
-                                Name
-                            </option>
-
-                            <option>
-                                Platform
-                            </option>
-
+                            <option>Recent</option>
+                            <option>Name</option>
+                            <option>Platform</option>
                         </select>
-
                     </div>
-
                 </div>
-
-
-                <div class="all-games-grid">
-
-
-                    <article class="small-game-card">
-
-                        <div class="small-cover cover-five">
-                            OK
-                        </div>
-
-                        <div>
-                            <h3>Outer Kingdoms</h3>
-                            <p>Adventure</p>
-                        </div>
-
-                    </article>
-
-
-                    <article class="small-game-card">
-
-                        <div class="small-cover cover-six">
-                            LH
-                        </div>
-
-                        <div>
-                            <h3>Lost Horizon</h3>
-                            <p>RPG</p>
-                        </div>
-
-                    </article>
-
-
-                    <article class="small-game-card">
-
-                        <div class="small-cover cover-seven">
-                            IC
-                        </div>
-
-                        <div>
-                            <h3>Iron Command</h3>
-                            <p>Strategy</p>
-                        </div>
-
-                    </article>
-
-
-                    <article class="small-game-card">
-
-                        <div class="small-cover cover-eight">
-                            NF
-                        </div>
-
-                        <div>
-                            <h3>Nightfall</h3>
-                            <p>Action</p>
-                        </div>
-
-                    </article>
-
-
-                    <article class="small-game-card">
-
-                        <div class="small-cover cover-nine">
-                            EV
-                        </div>
-
-                        <div>
-                            <h3>Evervale</h3>
-                            <p>Adventure</p>
-                        </div>
-
-                    </article>
-
-
-                    <article class="small-game-card">
-
-                        <div class="small-cover cover-ten">
-                            FS
-                        </div>
-
-                        <div>
-                            <h3>Fallen Skies</h3>
-                            <p>Action</p>
-                        </div>
-
-                    </article>
-
-                </div>
-
+                <div class="all-games-grid" id="all-games-grid"></div>
             </section>
-
 
             <footer class="library-footer">
-
-                <span>
-                    GameCentral
-                </span>
-
-                <span>
-                    Team Gamma
-                </span>
-
+                <span>GameCentral</span>
+                <span>Team Gamma</span>
             </footer>
-
         </main>
-
     </div>
 
-</body>
+    <!-- ADD GAME MODAL -->
+    <div class="modal-backdrop" id="add-game-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Add a Game</h2>
+                <button type="button" class="modal-close" id="close-add-game">×</button>
+            </div>
+            <form id="add-game-form">
+                <div class="filter-field">
+                    <label for="new-game-name">Game Name</label>
+                    <input type="text" id="new-game-name" placeholder="e.g. Skyward Ashes" required>
+                </div>
+                <div class="filter-field">
+                    <label for="new-game-platform">Platform</label>
+                    <select id="new-game-platform">
+                        <option>Steam</option>
+                        <option>Epic Games</option>
+                        <option>Xbox Game Pass</option>
+                        <option>Blizzard</option>
+                        <option>GOG</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="new-game-play-style">Play Style</label>
+                    <select id="new-game-play-style">
+                        <option>Single Player</option>
+                        <option>Multiplayer</option>
+                        <option>Co-op</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="toolbar-button" id="cancel-add-game">Cancel</button>
+                    <button type="submit" class="match-button">Add Game</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+        // ---- State: every game on the page comes from database.php ----
+        var games = [];          // [{ title, platform, playStyle }, ...] in database order
+        var selectedIndex = -1;  // index into games, -1 = nothing selected
+
+        // Filter state (set by the jQuery handlers further down)
+        var ANY_STYLE = 'Any Style';
+        var searchQuery = '';            // sidebar search text
+        var playStyleFilter = ANY_STYLE; // "Find Something to Play" > Play Style
+
+        var iconColors = ['icon-blue', 'icon-teal', 'icon-orange', 'icon-purple', 'icon-green', 'icon-red', 'icon-gold'];
+        var shelfCovers = ['cover-one', 'cover-two', 'cover-three', 'cover-four'];
+        var gridCovers = ['cover-five', 'cover-six', 'cover-seven', 'cover-eight', 'cover-nine', 'cover-ten'];
+
+        var gameList = document.getElementById('game-list');
+        var gameShelf = document.getElementById('game-shelf');
+        var allGamesGrid = document.getElementById('all-games-grid');
+        var featuredEmpty = document.getElementById('featured-empty');
+        var featuredGame = document.getElementById('featured-game');
+        var featuredCategory = document.querySelector('.featured-category');
+        var featuredTitle = document.querySelector('.art-content h2');
+        var featuredDescription = document.querySelector('.art-content p');
+
+        function initials(name) {
+            var words = name.trim().split(/\s+/);
+            if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+            return (words[0][0] + words[1][0]).toUpperCase();
+        }
+
+        function emptyMessage(text) {
+            var p = document.createElement('p');
+            p.className = 'empty-state';
+            p.textContent = text;
+            return p;
+        }
+
+        // ---- Rendering ----
+        function renderSidebar() {
+            var query = searchQuery.toLowerCase();
+            var shown = 0;
+
+            gameList.innerHTML = '';
+            games.forEach(function (game, i) {
+                // Search matches title or platform. Keep the original index (i)
+                // so selection still works while the list is filtered.
+                if (query &&
+                    game.title.toLowerCase().indexOf(query) === -1 &&
+                    game.platform.toLowerCase().indexOf(query) === -1) {
+                    return;
+                }
+                shown++;
+
+                var link = document.createElement('a');
+                link.href = '#';
+                link.className = 'sidebar-game' + (i === selectedIndex ? ' selected' : '');
+                link.dataset.index = i;
+                link.innerHTML =
+                    '<div class="sidebar-game-icon ' + iconColors[i % iconColors.length] + '"></div>' +
+                    '<div class="sidebar-game-info"><strong></strong><span></span></div>';
+                link.querySelector('.sidebar-game-icon').textContent = initials(game.title);
+                link.querySelector('strong').textContent = game.title;
+                link.querySelector('span').textContent = game.platform;
+                gameList.appendChild(link);
+            });
+
+            if (games.length > 0 && shown === 0) {
+                gameList.appendChild(emptyMessage('No games match “' + searchQuery + '”.'));
+            }
+        }
+
+        function renderFeatured() {
+            var game = games[selectedIndex];
+            if (!game) {
+                featuredGame.style.display = 'none';
+                featuredEmpty.style.display = '';
+                return;
+            }
+            featuredEmpty.style.display = 'none';
+            featuredGame.style.display = '';
+            featuredCategory.textContent = (game.platform || 'LIBRARY').toUpperCase();
+            featuredTitle.textContent = game.title;
+            featuredDescription.textContent = 'Jump into ' + game.title + '.';
+        }
+
+        function renderShelf() {
+            gameShelf.innerHTML = '';
+            if (games.length === 0) {
+                gameShelf.appendChild(emptyMessage('Games you add will show up here.'));
+                return;
+            }
+            // Newest four, newest first
+            games.slice(-4).reverse().forEach(function (game, i) {
+                var card = document.createElement('article');
+                card.className = 'library-game-card';
+                card.innerHTML =
+                    '<div class="library-cover ' + shelfCovers[i % shelfCovers.length] + '"><div class="cover-title"></div></div>' +
+                    '<div class="library-game-details"><h3></h3><p></p></div>';
+                card.querySelector('.cover-title').textContent = game.title;
+                card.querySelector('h3').textContent = game.title;
+                card.querySelector('p').textContent = game.platform;
+                gameShelf.appendChild(card);
+            });
+        }
+
+        function renderAllGames() {
+            allGamesGrid.innerHTML = '';
+            if (games.length === 0) {
+                allGamesGrid.appendChild(emptyMessage('Your library is empty.'));
+                return;
+            }
+
+            // Play Style filter (games saved without a play style only show under "Any Style")
+            var visible = games.filter(function (game) {
+                return playStyleFilter === ANY_STYLE || game.playStyle === playStyleFilter;
+            });
+
+            if (visible.length === 0) {
+                allGamesGrid.appendChild(emptyMessage('No ' + playStyleFilter + ' games in your library.'));
+                return;
+            }
+
+            visible.reverse().forEach(function (game, i) {
+                var card = document.createElement('article');
+                card.className = 'small-game-card';
+                card.innerHTML =
+                    '<div class="small-cover ' + gridCovers[i % gridCovers.length] + '"></div>' +
+                    '<div><h3></h3><p></p></div>';
+                card.querySelector('.small-cover').textContent = initials(game.title);
+                card.querySelector('h3').textContent = game.title;
+                card.querySelector('p').textContent = game.platform + (game.playStyle ? ' · ' + game.playStyle : '');
+                allGamesGrid.appendChild(card);
+            });
+        }
+
+        function render() {
+            renderSidebar();
+            renderFeatured();
+            renderShelf();
+            renderAllGames();
+        }
+
+        // ---- Sidebar selection ----
+        gameList.addEventListener('click', function (event) {
+            var gameLink = event.target.closest('.sidebar-game');
+            if (!gameLink) return;
+            event.preventDefault();
+            selectedIndex = Number(gameLink.dataset.index);
+            renderSidebar();
+            renderFeatured();
+        });
+
+        // ---- Search + Play Style filter (jQuery) ----
+        function clearSearch() {
+            $('#search-input').val('');
+            searchQuery = '';
+        }
+
+        $(function () {
+            // Search: filter the sidebar as you type
+            $('#search-input').on('input', function () {
+                searchQuery = $(this).val().trim();
+                renderSidebar();
+            });
+
+            // Play Style: apply on "Find Games", then jump to the results
+            $('#find-games-button').on('click', function () {
+                playStyleFilter = $('#play-style').val();
+                renderAllGames();
+                $('.all-games-section')[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+
+        // ---- Load games from database.php ----
+        render();
+
+        fetch('database.php')
+            .then(function (res) {
+                if (!res.ok) throw new Error('HTTP status ' + res.status);
+                return res.json();
+            })
+            .then(function (rows) {
+                games = rows.map(function (row) {
+                    return { title: row.title, platform: row.platform, playStyle: row.play_style || '' };
+                });
+                selectedIndex = games.length ? 0 : -1;
+                render();
+            })
+            .catch(function (err) {
+                console.error('Could not load saved games:', err);
+            });
+
+        // ---- Add Game modal ----
+        var backdrop = document.getElementById('add-game-backdrop');
+        var form = document.getElementById('add-game-form');
+        var nameInput = document.getElementById('new-game-name');
+        var platformSelect = document.getElementById('new-game-platform');
+        var playStyleSelect = document.getElementById('new-game-play-style');
+
+        function openModal() {
+            backdrop.classList.add('open');
+            nameInput.focus();
+        }
+
+        function closeModal() {
+            backdrop.classList.remove('open');
+            form.reset();
+        }
+
+        document.getElementById('open-add-game').addEventListener('click', openModal);
+        document.getElementById('open-add-game-small').addEventListener('click', openModal);
+        document.getElementById('close-add-game').addEventListener('click', closeModal);
+        document.getElementById('cancel-add-game').addEventListener('click', closeModal);
+
+        backdrop.addEventListener('click', function (event) {
+            if (event.target === backdrop) closeModal();
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && backdrop.classList.contains('open')) closeModal();
+        });
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            var name = nameInput.value.trim();
+            if (!name) return;
+
+            var platform = platformSelect.value;
+            var playStyle = playStyleSelect.value;
+            var submitButton = form.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
+            fetch('database.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: name, platform: platform, play_style: playStyle })
+            })
+                .then(async function (res) {
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        throw new Error(data.error || 'Save failed');
+                    }
+                    return data;
+                })
+                .then(function () {
+                    games.push({ title: name, platform: platform, playStyle: playStyle });
+                    selectedIndex = games.length - 1;
+                    clearSearch(); // so the new game is visible in the sidebar
+                    closeModal();
+                    render();
+                })
+                .catch(function (err) {
+                    alert('Could not save the game.\n\nDetails: ' + err.message);
+                    console.error(err);
+                })
+                .finally(function () {
+                    submitButton.disabled = false;
+                });
+        });
+    </script>
+</body>
 </html>
