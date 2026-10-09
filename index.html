@@ -13,6 +13,19 @@
             padding: 16px 0;
             margin: 0;
         }
+
+        /* Helper text under the Launch ID field in the Add Game modal */
+        .field-hint {
+            color: var(--text-dim);
+            font-size: 12px;
+            line-height: 1.5;
+            margin: -8px 0 14px;
+        }
+        .field-hint code {
+            background: var(--bg-card);
+            padding: 1px 4px;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body>
@@ -90,11 +103,11 @@
                     <div class="featured-bottom">
                         <div class="featured-details">
                             <p>LAST PLAYED</p>
-                            <strong>Never</strong>
+                            <strong id="featured-last-played">Never</strong>
                         </div>
                         <div class="featured-details">
                             <p>PLAY TIME</p>
-                            <strong>0 hours</strong>
+                            <strong id="featured-play-time">0 hours</strong>
                         </div>
                         <button class="play-button">▶ Play</button>
                     </div>
@@ -200,6 +213,17 @@
                     </select>
                 </div>
                 <div class="filter-field">
+                    <label for="new-game-launch-id">Launch ID <span style="color:var(--text-dim); font-weight:400;">(optional — powers the Play button)</span></label>
+                    <input type="text" id="new-game-launch-id" placeholder="1245620">
+                </div>
+                <p class="field-hint" id="launch-id-hint"></p>
+                <p class="field-hint" id="steam-lookup-status"></p>
+                <div class="filter-field" id="steam-autofill-row" style="display:none;">
+                    <label for="steam-url-input">Fallback: paste a Steam store link instead</label>
+                    <input type="text" id="steam-url-input" placeholder="https://store.steampowered.com/app/1245620/ELDEN_RING/">
+                    <p class="field-hint" id="steam-autofill-status"></p>
+                </div>
+                <div class="filter-field">
                     <label for="new-game-play-style">Play Style</label>
                     <select id="new-game-play-style">
                         <option>Single Player</option>
@@ -216,8 +240,11 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="LaunchGame.js"></script>
+    <script src="ImportGame.js"></script>
     <script>
-        // ---- State: every game on the page comes from database.php ----
+        // ---- App: state, rendering, storage, and wiring of LaunchGame / ImportGame ----
+
         var games = [];          // [{ title, platform, playStyle }, ...] in database order
         var selectedIndex = -1;  // index into games, -1 = nothing selected
 
@@ -238,6 +265,27 @@
         var featuredCategory = document.querySelector('.featured-category');
         var featuredTitle = document.querySelector('.art-content h2');
         var featuredDescription = document.querySelector('.art-content p');
+        var featuredLastPlayed = document.getElementById('featured-last-played');
+        var featuredPlayTime = document.getElementById('featured-play-time');
+
+        // ---- Play time formatting ----
+        function formatPlayTime(totalMinutes) {
+            var minutes = totalMinutes || 0;
+            if (minutes < 1) return '0 hours';
+            if (minutes < 60) return Math.round(minutes) + ' min';
+            var hours = minutes / 60;
+            var rounded = Math.round(hours * 10) / 10; // one decimal place
+            return rounded + (rounded === 1 ? ' hour' : ' hours');
+        }
+
+        function formatLastPlayed(timestamp) {
+            if (!timestamp) return 'Never';
+            var diffMs = Date.now() - timestamp;
+            if (diffMs < 60000) return 'Just now';
+            if (diffMs < 3600000) return Math.floor(diffMs / 60000) + 'm ago';
+            if (diffMs < 86400000) return Math.floor(diffMs / 3600000) + 'h ago';
+            return Math.floor(diffMs / 86400000) + 'd ago';
+        }
 
         function initials(name) {
             var words = name.trim().split(/\s+/);
@@ -298,6 +346,8 @@
             featuredCategory.textContent = (game.platform || 'LIBRARY').toUpperCase();
             featuredTitle.textContent = game.title;
             featuredDescription.textContent = 'Jump into ' + game.title + '.';
+            featuredLastPlayed.textContent = formatLastPlayed(game.lastPlayedAt);
+            featuredPlayTime.textContent = formatPlayTime(game.totalMinutes);
         }
 
         function renderShelf() {
@@ -388,92 +438,61 @@
             });
         });
 
-        // ---- Load games from database.php ----
+        // ---- Load games from localStorage ----
+        var STORAGE_KEY = 'gamecentral-games';
+
+        function loadGames() {
+            try {
+                var saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                var list = Array.isArray(saved) ? saved : [];
+                // Older saves won't have these fields yet - default them so
+                // formatting/tracking code never has to special-case undefined.
+                list.forEach(function (game) {
+                    if (typeof game.totalMinutes !== 'number') game.totalMinutes = 0;
+                    if (typeof game.lastPlayedAt !== 'number') game.lastPlayedAt = null;
+                });
+                return list;
+            } catch (err) {
+                console.error('Could not read saved games:', err);
+                return [];
+            }
+        }
+
+        function saveGames() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+            } catch (err) {
+                console.error('Could not save games:', err);
+            }
+        }
+
+        games = loadGames();
+        selectedIndex = games.length ? 0 : -1;
         render();
 
-        fetch('database.php')
-            .then(function (res) {
-                if (!res.ok) throw new Error('HTTP status ' + res.status);
-                return res.json();
-            })
-            .then(function (rows) {
-                games = rows.map(function (row) {
-                    return { title: row.title, platform: row.platform, playStyle: row.play_style || '' };
-                });
-                selectedIndex = games.length ? 0 : -1;
+        // ---- Launching (see LaunchGame.js) ----
+        var launcher = new LaunchGame({
+            playButton: document.querySelector('.play-button'),
+            getSelectedGame: function () {
+                var game = games[selectedIndex];
+                return game ? { game: game, index: selectedIndex } : null;
+            },
+            getGameAt: function (index) { return games[index]; },
+            onSessionEnded: function () {
+                saveGames();
                 render();
-            })
-            .catch(function (err) {
-                console.error('Could not load saved games:', err);
-            });
-
-        // ---- Add Game modal ----
-        var backdrop = document.getElementById('add-game-backdrop');
-        var form = document.getElementById('add-game-form');
-        var nameInput = document.getElementById('new-game-name');
-        var platformSelect = document.getElementById('new-game-platform');
-        var playStyleSelect = document.getElementById('new-game-play-style');
-
-        function openModal() {
-            backdrop.classList.add('open');
-            nameInput.focus();
-        }
-
-        function closeModal() {
-            backdrop.classList.remove('open');
-            form.reset();
-        }
-
-        document.getElementById('open-add-game').addEventListener('click', openModal);
-        document.getElementById('open-add-game-small').addEventListener('click', openModal);
-        document.getElementById('close-add-game').addEventListener('click', closeModal);
-        document.getElementById('cancel-add-game').addEventListener('click', closeModal);
-
-        backdrop.addEventListener('click', function (event) {
-            if (event.target === backdrop) closeModal();
+            }
         });
 
-        document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape' && backdrop.classList.contains('open')) closeModal();
-        });
-
-        form.addEventListener('submit', function (event) {
-            event.preventDefault();
-
-            var name = nameInput.value.trim();
-            if (!name) return;
-
-            var platform = platformSelect.value;
-            var playStyle = playStyleSelect.value;
-            var submitButton = form.querySelector('button[type="submit"]');
-            submitButton.disabled = true;
-
-            fetch('database.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: name, platform: platform, play_style: playStyle })
-            })
-                .then(async function (res) {
-                    const data = await res.json().catch(() => ({}));
-                    if (!res.ok) {
-                        throw new Error(data.error || 'Save failed');
-                    }
-                    return data;
-                })
-                .then(function () {
-                    games.push({ title: name, platform: platform, playStyle: playStyle });
-                    selectedIndex = games.length - 1;
-                    clearSearch(); // so the new game is visible in the sidebar
-                    closeModal();
-                    render();
-                })
-                .catch(function (err) {
-                    alert('Could not save the game.\n\nDetails: ' + err.message);
-                    console.error(err);
-                })
-                .finally(function () {
-                    submitButton.disabled = false;
-                });
+        // ---- Importing (see ImportGame.js) ----
+        var importer = new ImportGame({
+            onGameImported: function (game) {
+                games.push(game);
+                saveGames();
+                selectedIndex = games.length - 1;
+                clearSearch(); // so the new game is visible in the sidebar
+                render();
+            }
         });
     </script>
 </body>
