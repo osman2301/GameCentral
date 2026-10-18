@@ -1,44 +1,37 @@
-// ---- LaunchGame ----
-// Launches a game through its platform's protocol link and tracks play time.
+// ================================================================
+// LaunchGame
+// Starts games through Steam, Epic or Battle.net and tracks play time.
 //
-// We can't ask Steam/Epic/Blizzard how long a session lasted - once the
-// protocol link hands off, the game is a separate process the browser
-// can't see. Instead we time the gap between clicking Play (leaving the
-// tab) and coming back to it, and count that gap as the play session.
-// A short minimum guards against an accidental click or instant alt-tab
-// being logged as "played."
-//
-// Options:
-//   playButton       - the Play <button> element
-//   getSelectedGame  - () => { game, index } | null
-//   getGameAt        - (index) => game | undefined
-//   onSessionEnded   - () => void   called after play time has been updated
-//                                   (use it to save + re-render)
+// How play time works: the browser can't see the game once it starts,
+// so we time how long you're away from this tab after pressing Play.
+// Anything under 15 seconds doesn't count (e.g. an accidental click).
+// ================================================================
 class LaunchGame {
-    static MIN_SESSION_MS = 15000; // 15s
+    static MIN_SESSION_MS = 15000; // 15 seconds
 
     constructor(options) {
         this.playButton = options.playButton;
         this.getSelectedGame = options.getSelectedGame;
         this.getGameAt = options.getGameAt;
-        this.onSessionEnded = options.onSessionEnded;
+        this.onSessionEnded = options.onSessionEnded; // the app saves + redraws here
 
-        this.activeSession = null; // { gameIndex, startedAt }
+        this.activeSession = null; // { gameIndex, startedAt } while a game is running
 
         this.endActiveSession = this.endActiveSession.bind(this);
         this.handlePlayClick = this.handlePlayClick.bind(this);
 
+        // Coming back to this tab ends the play session
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') this.endActiveSession();
         });
-        // Fallback for browsers that miss visibilitychange
         window.addEventListener('focus', this.endActiveSession);
 
         this.playButton.addEventListener('click', this.handlePlayClick);
     }
 
-    // Builds the platform-specific protocol link that hands off to the real launcher.
-    // Returns null when there's no ID saved, or the platform has no direct-launch support.
+    // ---- Launch links ----
+    // Builds the link that tells the platform's app to start the game.
+    // Returns null when the game has no (valid) Launch ID.
     static buildLaunchUrl(platform, launchId) {
         if (!launchId) return null;
         const id = launchId.trim();
@@ -46,10 +39,11 @@ class LaunchGame {
         if (platform === 'Steam') {
             return 'steam://rungameid/' + id;
         }
-        if (platform === 'Blizzard') {
+        if (platform === 'Battle.net') {
             return 'battlenet://' + id;
         }
         if (platform === 'Epic Games') {
+            // Epic IDs are namespace:catalogItemId:appName
             const parts = id.split(':');
             if (parts.length !== 3) return null;
             return 'com.epicgames.launcher://apps/' + parts[0] + '%3A' + parts[1] + '%3A' + parts[2] + '?action=launch&silent=true';
@@ -57,20 +51,52 @@ class LaunchGame {
         return null;
     }
 
+    // Link that opens the platform's own app on a store search for the game,
+    // used when there's no Launch ID so the game can be installed first.
+    static appStoreUrl(platform, title) {
+        const term = encodeURIComponent(title);
+        if (platform === 'Epic Games') return 'com.epicgames.launcher://store/browse?q=' + term;
+        if (platform === 'Battle.net') return 'battlenet://';
+        return 'steam://openurl/https://store.steampowered.com/search/?term=' + term;
+    }
+
+    // ---- Starting a game ----
     handlePlayClick() {
         const selected = this.getSelectedGame();
         if (!selected) return;
+        this.launch(selected.game, selected.index);
+    }
 
-        const { game, index } = selected;
+    // Used by the smaller Play buttons (sidebar, Home, Discover)
+    launchAt(index) {
+        const game = this.getGameAt(index);
+        if (game) this.launch(game, index);
+    }
+
+    launch(game, index) {
         const url = LaunchGame.buildLaunchUrl(game.platform, game.launchId);
+
+        // No Launch ID: offer to open the store in the platform's app instead
         if (!url) {
-            alert('No launch link for "' + game.title + '" yet.\n\nEdit the game to add a Launch ID, or note that direct launching isn\'t supported for this platform.');
+            const app = game.platform === 'Epic Games' ? 'the Epic Games Launcher'
+                      : game.platform === 'Battle.net' ? 'the Battle.net app' : 'Steam';
+            if (confirm('"' + game.title + '" has no Launch ID yet, so it can\'t be started directly.\n\n' +
+                        'Open it in ' + app + ' so you can install it?')) {
+                window.location.href = LaunchGame.appStoreUrl(game.platform, game.title);
+            }
             return;
         }
+
+        // Start the play timer and mark the game as played right away,
+        // so Home shows it immediately. Play time is added when you come back.
         this.activeSession = { gameIndex: index, startedAt: Date.now() };
+        game.lastPlayedAt = Date.now();
+        this.onSessionEnded();
         window.location.href = url;
     }
 
+    // ---- Ending a session ----
+    // Runs when you return to the tab: adds the time you were away to the game.
     endActiveSession() {
         if (!this.activeSession) return;
 
