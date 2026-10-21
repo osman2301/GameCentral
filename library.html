@@ -117,13 +117,17 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="LaunchGame.js"></script>
-    <script src="ImportGame.js"></script>
+    <script src="Game.js"></script>
+    <script src="CentralLibrary.js"></script>
+    <script src="PlatformLibrary.js"></script>
+    <script src="OriginalPlatform.js"></script>
+    <script src="LaunchController.js"></script>
+    <script src="ImportController.js"></script>
     <script>
         // ================================================================
         // App state
         // ================================================================
-        var games = [];          // every game in your library: { title, platform, launchId, playStyle, totalMinutes, lastPlayedAt }
+        var games = [];          // every game in your library (Game objects, see Game.js)
         var selectedIndex = -1;  // which game is shown on the Library page (-1 = none)
 
         // Colour styles handed out to game icons/cards in turn
@@ -223,7 +227,7 @@
             play.type = 'button';
             play.className = 'play-button play-button-small';
             play.textContent = '▶ Play';
-            play.addEventListener('click', function () { launcher.launchAt(i); });
+            play.addEventListener('click', function () { launcher.processLaunch(games[i].id); });
             body.appendChild(name);
             body.appendChild(sub);
             body.appendChild(play);
@@ -248,37 +252,11 @@
         }
 
         // ================================================================
-        // Saving and loading (the library lives in the browser's localStorage,
-        // so every page sees the same games)
+        // The library (see CentralLibrary.js). It's saved in the browser,
+        // so every page sees the same games.
         // ================================================================
-        var STORAGE_KEY = 'gamecentral-games';
-
-        function loadGames() {
-            try {
-                var saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-                var list = Array.isArray(saved) ? saved : [];
-                // Older saves may be missing these, so fill in defaults
-                list.forEach(function (game) {
-                    if (typeof game.totalMinutes !== 'number') game.totalMinutes = 0;
-                    if (typeof game.lastPlayedAt !== 'number') game.lastPlayedAt = null;
-                });
-                return list;
-            } catch (err) {
-                console.error('Could not read saved games:', err);
-                return [];
-            }
-        }
-
-        function saveGames() {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
-            } catch (err) {
-                console.error('Could not save games:', err);
-                alert('Could not save your library - browser storage may be full. Try removing a game.');
-            }
-        }
-
-        games = loadGames();
+        var library = new CentralLibrary();
+        games = library.games;
 
         // ================================================================
         // ADD GAME WINDOW (opened by "+ Add Game")
@@ -397,31 +375,24 @@
         </div>`);
 
         // ================================================================
-        // Adding games (see ImportGame.js)
+        // Adding games (see ImportController.js and PlatformLibrary.js)
         // ================================================================
-        new ImportGame({
-            onGameImported: function (game) {
-                games.push(game);
-                saveGames();
-                onGameAdded(games.length - 1);
-            }
+        new ImportController({
+            library: library,
+            platformLibrary: new PlatformLibrary(),
+            onGameImported: function (game) { onGameAdded(games.indexOf(game)); }
         });
 
         // ================================================================
-        // Launching games (see LaunchGame.js)
+        // Launching games (see LaunchController.js and OriginalPlatform.js)
         // The big Play button only exists on library.html; elsewhere it's null.
         // ================================================================
-        var launcher = new LaunchGame({
+        var launcher = new LaunchController({
+            library: library,
+            platform: new OriginalPlatform(),
             playButton: document.getElementById('featured-play-button'),
-            getSelectedGame: function () {
-                var game = games[selectedIndex];
-                return game ? { game: game, index: selectedIndex } : null;
-            },
-            getGameAt: function (index) { return games[index]; },
-            onSessionEnded: function () {
-                saveGames();
-                renderPage();
-            }
+            getSelectedGame: function () { return games[selectedIndex] || null; },
+            onSessionEnded: function () { renderPage(); }
         });
 
         // ================================================================
@@ -589,7 +560,7 @@
             var launchClicked = !!event.target.closest('.sidebar-launch');
             renderSidebar();
             renderFeatured();
-            if (launchClicked) launcher.launchAt(selectedIndex); // the ▶ button
+            if (launchClicked) launcher.processLaunch(games[selectedIndex].id); // the ▶ button
         });
 
         document.getElementById('launcher-tabs').addEventListener('click', function (event) {
@@ -622,16 +593,10 @@
             if (!game) return;
             if (!confirm('Remove "' + game.title + '" from your library?')) return;
 
-            // If a game is being timed, keep the timer pointing at the right game,
-            // since every game after the removed one moves up a place.
-            var session = launcher.activeSession;
-            if (session) {
-                if (session.gameIndex === index) launcher.activeSession = null;
-                else if (session.gameIndex > index) session.gameIndex--;
-            }
+            // Stop timing it if it's the game being played
+            if (launcher.activeSession && launcher.activeSession.gameID === game.id) launcher.activeSession = null;
 
-            games.splice(index, 1);
-            saveGames();
+            library.removeGame(index);
             selectedIndex = games.length ? Math.min(index, games.length - 1) : -1;
             renderPage();
         }
