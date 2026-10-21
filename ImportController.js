@@ -188,7 +188,7 @@ class ImportController {
         this.onGameImported(game);
     }
 
-    // Fills an installed-games drop-down from a list
+    // Fills an installed-games drop-down from a list of Game objects
     static fillSelect(sel, list, emptyText, clearButtonId) {
         sel.innerHTML = '';
         const first = document.createElement('option');
@@ -198,7 +198,7 @@ class ImportController {
         list.forEach((g, i) => {
             const opt = document.createElement('option');
             opt.value = String(i);
-            opt.textContent = g[1];
+            opt.textContent = g.title;
             sel.appendChild(opt);
         });
         sel.disabled = !list.length;
@@ -285,16 +285,16 @@ class ImportController {
     }
 
     renderSteamSelect() {
-        ImportController.fillSelect(this.steamGameSelect, this.platformLibrary.steamInstalled, 'No Steam games loaded yet', 'steam-clear-button');
+        ImportController.fillSelect(this.steamGameSelect, this.platformLibrary.requestGames('Steam'), 'No Steam games loaded yet', 'steam-clear-button');
     }
 
     pickSteamGame() {
-        const g = this.platformLibrary.steamInstalled[Number(this.steamGameSelect.value)];
+        const g = this.platformLibrary.requestGames('Steam')[Number(this.steamGameSelect.value)];
         if (this.steamGameSelect.value === '' || !g) return;
         clearTimeout(this.steamLookupTimer);
-        this.nameInput.value = g[1];
-        this.launchIdInput.value = g[0];
-        ImportController.setStatus(this.steamLookupStatus, 'Launch ID ' + g[0] + ' for "' + g[1] + '" filled in.');
+        this.nameInput.value = g.title;
+        this.launchIdInput.value = g.launchId;
+        ImportController.setStatus(this.steamLookupStatus, 'Launch ID ' + g.launchId + ' for "' + g.title + '" filled in.');
     }
 
     clearSteamInstalled() {
@@ -331,7 +331,7 @@ class ImportController {
     }
 
     renderEpicSelect() {
-        ImportController.fillSelect(this.epicGameSelect, this.platformLibrary.epicGames, 'No Epic games loaded yet', 'epic-clear-button');
+        ImportController.fillSelect(this.epicGameSelect, this.platformLibrary.requestGames('Epic Games'), 'No Epic games loaded yet', 'epic-clear-button');
     }
 
     clearEpicGames() {
@@ -341,11 +341,11 @@ class ImportController {
     }
 
     pickEpicGame() {
-        const g = this.platformLibrary.epicGames[Number(this.epicGameSelect.value)];
+        const g = this.platformLibrary.requestGames('Epic Games')[Number(this.epicGameSelect.value)];
         if (this.epicGameSelect.value === '' || !g) return;
-        this.nameInput.value = g[1];
-        this.launchIdInput.value = g[0];
-        ImportController.setStatus(this.epicLookupStatus, 'Launch ID for "' + g[1] + '" filled in.');
+        this.nameInput.value = g.title;
+        this.launchIdInput.value = g.launchId;
+        ImportController.setStatus(this.epicLookupStatus, 'Launch ID for "' + g.title + '" filled in.');
     }
 
     // Runs as you type: looks for the name in your installed Epic games
@@ -399,16 +399,16 @@ class ImportController {
     }
 
     renderBattleSelect() {
-        ImportController.fillSelect(this.battleGameSelect, this.platformLibrary.battleInstalled, 'No Battle.net games loaded yet', 'battle-clear-button');
+        ImportController.fillSelect(this.battleGameSelect, this.platformLibrary.requestGames('Battle.net'), 'No Battle.net games loaded yet', 'battle-clear-button');
     }
 
     pickBattleGame() {
-        const g = this.platformLibrary.battleInstalled[Number(this.battleGameSelect.value)];
+        const g = this.platformLibrary.requestGames('Battle.net')[Number(this.battleGameSelect.value)];
         if (this.battleGameSelect.value === '' || !g) return;
         clearTimeout(this.battleLookupTimer);
-        this.nameInput.value = g[1];
-        this.launchIdInput.value = g[0];
-        ImportController.setStatus(this.battleLookupStatus, 'Launch ID ' + g[0] + ' for "' + g[1] + '" filled in.');
+        this.nameInput.value = g.title;
+        this.launchIdInput.value = g.launchId;
+        ImportController.setStatus(this.battleLookupStatus, 'Launch ID ' + g.launchId + ' for "' + g.title + '" filled in.');
     }
 
     clearBattleInstalled() {
