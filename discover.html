@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discover · GameCentral</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ===== TOP BAR: logo, page links, Add Game ===== -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <a href="index.html" class="brand">
+                <div class="brand-icon">G</div>
+                <span>GameCentral</span>
+            </a>
+            <nav class="main-nav">
+                <a href="index.html">Home</a>
+                <a href="library.html">Library</a>
+                <a href="discover.html" class="active">Discover</a>
+            </nav>
+        </div>
+        <div class="topbar-right">
+            <button class="install-button" id="open-add-game">+ Add Game</button>
+        </div>
+    </header>
+
+    <div class="app-layout">
+        <!-- ===== DISCOVER PAGE: random pick, backlog, store links ===== -->
+        <main class="library-main">
+            <section class="library-toolbar">
+                <div>
+                    <p class="small-title">GAMECENTRAL</p>
+                    <h1>Discover</h1>
+                </div>
+            </section>
+
+            <section class="disc-section">
+                <h2>Pick something for me</h2>
+                <p class="disc-note">Can't decide? Let the library choose.</p>
+                <div class="filter-panel">
+                    <div class="filter-field">
+                        <label for="pick-style">Play Style</label>
+                        <select id="pick-style">
+                            <option>Any Style</option>
+                            <option>Single Player</option>
+                            <option>Multiplayer</option>
+                            <option>Co-op</option>
+                        </select>
+                    </div>
+                    <div class="filter-field">
+                        <label for="pick-unplayed">Only games I haven't played</label>
+                        <input type="checkbox" id="pick-unplayed">
+                    </div>
+                    <button class="match-button" id="pick-button">Surprise me</button>
+                </div>
+                <div id="pick-result"></div>
+            </section>
+
+            <div id="discover-content"></div> <!-- "Still in your backlog" / "Worth revisiting", filled in by the script -->
+
+            <section class="disc-section">
+                <h2>Find new games</h2>
+                <p class="disc-note">Browse what's new and popular on each store. These open in a new tab.</p>
+                <div class="store-links">
+                    <a href="https://store.steampowered.com/explore/new/" target="_blank" rel="noopener">Steam: New &amp; Trending ↗</a>
+                    <a href="https://store.steampowered.com/charts/topsellers/" target="_blank" rel="noopener">Steam: Top Sellers ↗</a>
+                    <a href="https://store.steampowered.com/specials" target="_blank" rel="noopener">Steam: Specials ↗</a>
+                    <a href="https://store.epicgames.com/en-US/free-games" target="_blank" rel="noopener">Epic: Free Games ↗</a>
+                    <a href="https://store.epicgames.com/en-US/browse" target="_blank" rel="noopener">Epic: Browse ↗</a>
+                    <a href="https://shop.battle.net/" target="_blank" rel="noopener">Battle.net: Shop ↗</a>
+                </div>
+                <div class="store-search">
+                    <input type="text" id="store-search-input" placeholder="Search Steam for a game" aria-label="Search Steam">
+                    <button class="toolbar-button" id="store-search-button">Search ↗</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="LaunchGame.js"></script>
+    <script src="ImportGame.js"></script>
+    <script>
+        // ================================================================
+        // App state
+        // ================================================================
+        var games = [];          // every game in your library: { title, platform, launchId, playStyle, totalMinutes, lastPlayedAt }
+        var selectedIndex = -1;  // which game is shown on the Library page (-1 = none)
+
+        // Colour styles handed out to game icons/cards in turn
+        var iconColors = ['icon-blue', 'icon-teal', 'icon-orange', 'icon-purple', 'icon-green', 'icon-red', 'icon-gold'];
+        var shelfCovers = ['cover-one', 'cover-two', 'cover-three', 'cover-four'];
+        var gridCovers = ['cover-five', 'cover-six', 'cover-seven', 'cover-eight', 'cover-nine', 'cover-ten'];
+
+        // Each page replaces these:
+        var renderPage = function () {};                         // redraw the page
+        var onGameAdded = function (index) { renderPage(); };    // after "+ Add Game"
+
+        // ================================================================
+        // Small helpers for showing text
+        // ================================================================
+
+        // Minutes -> "45 min" / "2.5 hours"
+        function formatPlayTime(totalMinutes) {
+            var minutes = totalMinutes || 0;
+            if (minutes < 1) return '0 hours';
+            if (minutes < 60) return Math.round(minutes) + ' min';
+            var rounded = Math.round(minutes / 60 * 10) / 10;
+            return rounded + (rounded === 1 ? ' hour' : ' hours');
+        }
+
+        // Date -> "Just now" / "5m ago" / "3h ago" / "2d ago"
+        function formatLastPlayed(timestamp) {
+            if (!timestamp) return 'Never';
+            var diffMs = Date.now() - timestamp;
+            if (diffMs < 60000) return 'Just now';
+            if (diffMs < 3600000) return Math.floor(diffMs / 60000) + 'm ago';
+            if (diffMs < 86400000) return Math.floor(diffMs / 3600000) + 'h ago';
+            return Math.floor(diffMs / 86400000) + 'd ago';
+        }
+
+        // "Risk of Rain" -> "RO" (shown on the coloured squares)
+        function initials(name) {
+            var words = name.trim().split(/\s+/);
+            if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+            return (words[0][0] + words[1][0]).toUpperCase();
+        }
+
+        // Play styles. Older saves may also have a "modes" list or "Auto-detect".
+        function modesFor(g) {
+            if (g.modes && g.modes.length) return g.modes;
+            return (g.playStyle && g.playStyle !== 'Auto-detect') ? [g.playStyle] : [];
+        }
+        function hasPlayStyle(g, style) {
+            return g.playStyle === style || (g.modes || []).indexOf(style) >= 0;
+        }
+        function modesLabel(g) { return modesFor(g).join(', '); }
+        function styleLabel(g) { return modesLabel(g) || 'Unknown'; }
+
+        function emptyMessage(text) {
+            var p = document.createElement('p');
+            p.className = 'empty-state';
+            p.textContent = text;
+            return p;
+        }
+
+        function isUnplayed(g) { return !g.lastPlayedAt && !(g.totalMinutes > 0); }
+
+        // Positions of games that pass a test, optionally sorted and limited
+        function pickIndexes(filterFn, cmp, limit) {
+            var idx = [];
+            games.forEach(function (g, i) { if (!filterFn || filterFn(g)) idx.push(i); });
+            if (cmp) idx.sort(cmp);
+            return limit ? idx.slice(0, limit) : idx;
+        }
+
+        function note_played(g) { return 'Played ' + formatLastPlayed(g.lastPlayedAt) + ' · ' + formatPlayTime(g.totalMinutes); }
+        function note_platform(g) { return g.platform + (modesLabel(g) ? ' · ' + modesLabel(g) : ''); }
+
+        // Opens a game on the Library page (library.html?game=3)
+        function openGame(index) {
+            window.location.href = 'library.html?game=' + index;
+        }
+
+        // ================================================================
+        // Small game cards (Home, Discover, "Surprise me")
+        // ================================================================
+        function miniCard(i, note) {
+            var g = games[i];
+            var card = document.createElement('article');
+            card.className = 'mini-card';
+            var cover = document.createElement('div');
+            cover.className = 'mini-cover ' + shelfCovers[i % shelfCovers.length];
+            cover.textContent = initials(g.title);
+            cover.addEventListener('click', function () { openGame(i); });
+            var body = document.createElement('div');
+            body.className = 'mini-body';
+            var name = document.createElement('strong');
+            name.textContent = g.title;
+            name.addEventListener('click', function () { openGame(i); });
+            var sub = document.createElement('span');
+            sub.textContent = note;
+            var play = document.createElement('button');
+            play.type = 'button';
+            play.className = 'play-button play-button-small';
+            play.textContent = '▶ Play';
+            play.addEventListener('click', function () { launcher.launchAt(i); });
+            body.appendChild(name);
+            body.appendChild(sub);
+            body.appendChild(play);
+            card.appendChild(cover);
+            card.appendChild(body);
+            return card;
+        }
+
+        // A heading + grid of mini cards (or null if there are no games)
+        function gameSection(title, idxs, noteFn, className) {
+            if (!idxs.length) return null;
+            var sec = document.createElement('section');
+            sec.className = className;
+            var h = document.createElement('h2');
+            h.textContent = title;
+            var grid = document.createElement('div');
+            grid.className = 'mini-grid';
+            idxs.forEach(function (i) { grid.appendChild(miniCard(i, noteFn(games[i]))); });
+            sec.appendChild(h);
+            sec.appendChild(grid);
+            return sec;
+        }
+
+        // ================================================================
+        // Saving and loading (the library lives in the browser's localStorage,
+        // so every page sees the same games)
+        // ================================================================
+        var STORAGE_KEY = 'gamecentral-games';
+
+        function loadGames() {
+            try {
+                var saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                var list = Array.isArray(saved) ? saved : [];
+                // Older saves may be missing these, so fill in defaults
+                list.forEach(function (game) {
+                    if (typeof game.totalMinutes !== 'number') game.totalMinutes = 0;
+                    if (typeof game.lastPlayedAt !== 'number') game.lastPlayedAt = null;
+                });
+                return list;
+            } catch (err) {
+                console.error('Could not read saved games:', err);
+                return [];
+            }
+        }
+
+        function saveGames() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+            } catch (err) {
+                console.error('Could not save games:', err);
+                alert('Could not save your library - browser storage may be full. Try removing a game.');
+            }
+        }
+
+        games = loadGames();
+
+        // ================================================================
+        // ADD GAME WINDOW (opened by "+ Add Game")
+        // Written once here and added to every page, so the pages stay short.
+        // (Backslashes are doubled because this is inside a JS string.)
+        // ================================================================
+        document.body.insertAdjacentHTML('beforeend', `
+        <div class="modal-backdrop" id="add-game-backdrop">
+            <div class="modal add-game-modal">
+                <div class="modal-header">
+                    <h2>Add a Game</h2>
+                    <button type="button" class="modal-close" id="close-add-game" aria-label="Close">×</button>
+                </div>
+                <form id="add-game-form">
+                    <!-- 1. Platform -->
+                    <div class="filter-field">
+                        <label for="new-game-platform">Platform</label>
+                        <select id="new-game-platform">
+                            <option>Steam</option>
+                            <option>Epic Games</option>
+                            <option>Battle.net</option>
+                        </select>
+                    </div>
+
+                    <!-- 2. Pick from installed games (only the chosen platform's box is shown) -->
+                    <section class="import-card" id="steam-import-row" style="display:none;">
+                        <div class="import-card-head">
+                            <span class="import-card-title">Installed Steam games</span>
+                            <button type="button" class="link-button" id="steam-clear-button" style="display:none;">Clear list</button>
+                        </div>
+                        <div class="import-card-pick">
+                            <select id="steam-game-select" aria-label="Installed Steam games"></select>
+                            <button type="button" class="toolbar-button" id="steam-files-button">Load…</button>
+                        </div>
+                        <input type="file" id="steam-files-input" accept=".acf" multiple hidden>
+                        <p class="field-hint status" id="steam-import-status"></p>
+                        <details class="help">
+                            <summary>Where are these files?</summary>
+                            <p>Click <b>Load…</b>, open <code>C:\\Program Files (x86)\\Steam\\steamapps</code> and select all the <code>appmanifest_….acf</code> files. Another Steam library (e.g. <code>D:\\SteamLibrary\\steamapps</code>)? Load it too — it adds to the list.</p>
+                        </details>
+                    </section>
+
+                    <section class="import-card" id="epic-import-row" style="display:none;">
+                        <div class="import-card-head">
+                            <span class="import-card-title">Installed Epic games</span>
+                            <button type="button" class="link-button" id="epic-clear-button" style="display:none;">Clear list</button>
+                        </div>
+                        <div class="import-card-pick">
+                            <select id="epic-game-select" aria-label="Installed Epic games"></select>
+                            <button type="button" class="toolbar-button" id="epic-folder-button">Load…</button>
+                        </div>
+                        <input type="file" id="epic-folder-input" webkitdirectory multiple hidden>
+                        <p class="field-hint status" id="epic-import-status"></p>
+                        <details class="help">
+                            <summary>Where are these files?</summary>
+                            <p>Click <b>Load…</b> and paste <code>C:\\ProgramData\\Epic\\EpicGamesLauncher\\Data\\Manifests</code> into the address bar (ProgramData is hidden). Game missing? Load the folder your games are installed in instead, e.g. <code>D:\\Epic Games</code>.</p>
+                        </details>
+                    </section>
+
+                    <section class="import-card" id="battle-import-row" style="display:none;">
+                        <div class="import-card-head">
+                            <span class="import-card-title">Installed Battle.net games</span>
+                            <button type="button" class="link-button" id="battle-clear-button" style="display:none;">Clear list</button>
+                        </div>
+                        <div class="import-card-pick">
+                            <select id="battle-game-select" aria-label="Installed Battle.net games"></select>
+                            <button type="button" class="toolbar-button" id="battle-files-button">Load…</button>
+                        </div>
+                        <input type="file" id="battle-files-input" accept=".db" hidden>
+                        <p class="field-hint status" id="battle-import-status"></p>
+                        <details class="help">
+                            <summary>Where is this file?</summary>
+                            <p>Click <b>Load…</b>, paste <code>C:\\ProgramData\\Battle.net\\Agent</code> into the address bar (ProgramData is hidden) and pick <code>product.db</code>. Not installed yet? Just type the name below — known Battle.net games fill in by themselves.</p>
+                        </details>
+                    </section>
+
+                    <div class="form-divider"><span>Game details</span></div>
+
+                    <!-- 3. Name, Launch ID and play style -->
+                    <div class="filter-field">
+                        <label for="new-game-name">Game Name</label>
+                        <input type="text" id="new-game-name" placeholder="e.g. Skyward Ashes" required>
+                    </div>
+                    <div class="filter-field">
+                        <label for="new-game-launch-id">Launch ID <span class="optional">optional — powers the Play button</span></label>
+                        <input type="text" id="new-game-launch-id" placeholder="1245620">
+                        <p class="field-hint status" id="steam-lookup-status"></p>
+                        <p class="field-hint status" id="epic-lookup-status"></p>
+                        <p class="field-hint status" id="battle-lookup-status"></p>
+                        <p class="field-hint" id="launch-id-hint"></p>
+                    </div>
+
+                    <details class="help" id="steam-autofill-row" style="display:none;">
+                        <summary>Not installed or not found? Get the ID from Steam</summary>
+                        <button type="button" class="toolbar-button" id="steam-search-button">Search Steam for this name ↗</button>
+                        <input type="text" id="steam-url-input" placeholder="Paste the store link or App ID">
+                        <p class="field-hint status" id="steam-autofill-status"></p>
+                    </details>
+
+                    <div class="filter-field">
+                        <label for="new-game-play-style">Play Style</label>
+                        <select id="new-game-play-style">
+                            <option value="">Not set</option>
+                            <option>Single Player</option>
+                            <option>Multiplayer</option>
+                            <option>Co-op</option>
+                        </select>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="toolbar-button" id="cancel-add-game">Cancel</button>
+                        <button type="submit" class="match-button">Add Game</button>
+                    </div>
+                </form>
+            </div>
+        </div>`);
+
+        // ================================================================
+        // Adding games (see ImportGame.js)
+        // ================================================================
+        new ImportGame({
+            onGameImported: function (game) {
+                games.push(game);
+                saveGames();
+                onGameAdded(games.length - 1);
+            }
+        });
+
+        // ================================================================
+        // Launching games (see LaunchGame.js)
+        // The big Play button only exists on library.html; elsewhere it's null.
+        // ================================================================
+        var launcher = new LaunchGame({
+            playButton: document.getElementById('featured-play-button'),
+            getSelectedGame: function () {
+                var game = games[selectedIndex];
+                return game ? { game: game, index: selectedIndex } : null;
+            },
+            getGameAt: function (index) { return games[index]; },
+            onSessionEnded: function () {
+                saveGames();
+                renderPage();
+            }
+        });
+
+        // ================================================================
+        // Discover: never-played games, and games not played for a month
+        // ================================================================
+        function renderDiscover() {
+            var el = document.getElementById('discover-content');
+            el.innerHTML = '';
+            var month = 30 * 86400000;
+            [
+                gameSection('Still in your backlog', pickIndexes(isUnplayed, null, 8), note_platform, 'disc-section'),
+                gameSection('Worth revisiting', pickIndexes(function (g) { return g.lastPlayedAt && Date.now() - g.lastPlayedAt > month; }, function (a, b) { return games[b].totalMinutes - games[a].totalMinutes; }, 4), note_played, 'disc-section')
+            ].forEach(function (sec) { if (sec) el.appendChild(sec); });
+        }
+
+        // "Surprise me": a random game matching the chosen filters
+        document.getElementById('pick-button').addEventListener('click', function () {
+            var style = document.getElementById('pick-style').value;
+            var onlyNew = document.getElementById('pick-unplayed').checked;
+            var out = document.getElementById('pick-result');
+            out.innerHTML = '';
+            var idx = pickIndexes(function (g) {
+                return (style === 'Any Style' || hasPlayStyle(g, style)) && (!onlyNew || isUnplayed(g));
+            });
+            if (!idx.length) {
+                var p = document.createElement('p');
+                p.className = 'disc-note';
+                p.textContent = games.length ? 'No games match those filters.' : 'Add a game first.';
+                out.appendChild(p);
+                return;
+            }
+            var i = idx[Math.floor(Math.random() * idx.length)];
+            var card = miniCard(i, note_platform(games[i]));
+            card.classList.add('pick-card');
+            out.appendChild(card);
+        });
+
+        // Steam search box (button or Enter)
+        document.getElementById('store-search-button').addEventListener('click', function () {
+            var term = encodeURIComponent(document.getElementById('store-search-input').value.trim());
+            window.open('https://store.steampowered.com/search/?term=' + term, '_blank', 'noopener');
+        });
+        document.getElementById('store-search-input').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') document.getElementById('store-search-button').click();
+        });
+
+        renderPage = renderDiscover;
+        renderPage();
+    </script>
+</body>
+</html>

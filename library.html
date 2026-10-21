@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library · GameCentral</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ===== TOP BAR: logo, page links, Add Game ===== -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <a href="index.html" class="brand">
+                <div class="brand-icon">G</div>
+                <span>GameCentral</span>
+            </a>
+            <nav class="main-nav">
+                <a href="index.html">Home</a>
+                <a href="library.html" class="active">Library</a>
+                <a href="discover.html">Discover</a>
+            </nav>
+        </div>
+        <div class="topbar-right">
+            <button class="install-button" id="open-add-game">+ Add Game</button>
+        </div>
+    </header>
+
+    <div class="app-layout">
+
+        <!-- ===== SIDEBAR: search, platform tabs, game list ===== -->
+        <aside class="sidebar">
+            <div class="sidebar-top">
+                <div class="library-heading">
+                    <span>LIBRARY</span>
+                    <button id="open-add-game-small">+</button>
+                </div>
+                <div class="search-box">
+                    <span>⌕</span>
+                    <input type="text" id="search-input" placeholder="Search games" aria-label="Search games" autocomplete="off">
+                </div>
+                <div class="sidebar-filter-row launcher-tabs" id="launcher-tabs">
+                    <button class="filter-small active" data-launcher="all">All</button>
+                    <button class="filter-small" data-launcher="Steam">Steam</button>
+                    <button class="filter-small" data-launcher="Epic Games">Epic</button>
+                    <button class="filter-small" data-launcher="Battle.net">Battle.net</button>
+                </div>
+            </div>
+            <div class="game-list" id="game-list"></div> <!-- filled in by the script -->
+        </aside>
+
+        <!-- ===== LIBRARY PAGE: selected game, recently added, all games ===== -->
+        <main class="library-main">
+            <section class="library-toolbar">
+                <div>
+                    <p class="small-title">GAMECENTRAL</p>
+                    <h1>Library</h1>
+                </div>
+            </section>
+
+            <!-- Selected game -->
+            <section class="recent-section">
+                <div class="section-title-row">
+                    <h2>Game</h2>
+                </div>
+                <p class="empty-state" id="featured-empty">No games yet. Click “+ Add Game” to add your first one.</p>
+                <article class="featured-game" id="featured-game" style="display: none;">
+                    <div class="featured-art">
+                        <div class="art-content">
+                            <span class="featured-category"></span>
+                            <h2></h2>
+                            <p></p>
+                        </div>
+                    </div>
+                    <div class="featured-bottom">
+                        <div class="featured-details">
+                            <p>LAST PLAYED</p>
+                            <strong id="featured-last-played">Never</strong>
+                        </div>
+                        <div class="featured-details">
+                            <p>PLAY TIME</p>
+                            <strong id="featured-play-time">0 hours</strong>
+                        </div>
+                        <div class="featured-details">
+                            <p>PLAY STYLE</p>
+                            <strong id="featured-playstyle" style="font-size:14px; max-width:320px; display:block;">Unknown</strong>
+                        </div>
+                        <div class="featured-actions">
+                            <button type="button" class="ghost-button remove-button" id="remove-game-button">Remove</button>
+                            <button type="button" class="play-button" id="featured-play-button">▶ Play</button>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <!-- Newest 4 games -->
+            <section class="shelf-section">
+                <div class="section-title-row">
+                    <h2>Recently Added</h2>
+                </div>
+                <div class="game-shelf" id="game-shelf"></div>
+            </section>
+
+            <!-- Every game -->
+            <section class="all-games-section">
+                <div class="section-title-row">
+                    <h2>All Games</h2>
+                </div>
+                <div class="all-games-grid" id="all-games-grid"></div>
+            </section>
+
+            <footer class="library-footer">
+                <span>GameCentral</span>
+                <span>Team Gamma</span>
+            </footer>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="LaunchGame.js"></script>
+    <script src="ImportGame.js"></script>
+    <script>
+        // ================================================================
+        // App state
+        // ================================================================
+        var games = [];          // every game in your library: { title, platform, launchId, playStyle, totalMinutes, lastPlayedAt }
+        var selectedIndex = -1;  // which game is shown on the Library page (-1 = none)
+
+        // Colour styles handed out to game icons/cards in turn
+        var iconColors = ['icon-blue', 'icon-teal', 'icon-orange', 'icon-purple', 'icon-green', 'icon-red', 'icon-gold'];
+        var shelfCovers = ['cover-one', 'cover-two', 'cover-three', 'cover-four'];
+        var gridCovers = ['cover-five', 'cover-six', 'cover-seven', 'cover-eight', 'cover-nine', 'cover-ten'];
+
+        // Each page replaces these:
+        var renderPage = function () {};                         // redraw the page
+        var onGameAdded = function (index) { renderPage(); };    // after "+ Add Game"
+
+        // ================================================================
+        // Small helpers for showing text
+        // ================================================================
+
+        // Minutes -> "45 min" / "2.5 hours"
+        function formatPlayTime(totalMinutes) {
+            var minutes = totalMinutes || 0;
+            if (minutes < 1) return '0 hours';
+            if (minutes < 60) return Math.round(minutes) + ' min';
+            var rounded = Math.round(minutes / 60 * 10) / 10;
+            return rounded + (rounded === 1 ? ' hour' : ' hours');
+        }
+
+        // Date -> "Just now" / "5m ago" / "3h ago" / "2d ago"
+        function formatLastPlayed(timestamp) {
+            if (!timestamp) return 'Never';
+            var diffMs = Date.now() - timestamp;
+            if (diffMs < 60000) return 'Just now';
+            if (diffMs < 3600000) return Math.floor(diffMs / 60000) + 'm ago';
+            if (diffMs < 86400000) return Math.floor(diffMs / 3600000) + 'h ago';
+            return Math.floor(diffMs / 86400000) + 'd ago';
+        }
+
+        // "Risk of Rain" -> "RO" (shown on the coloured squares)
+        function initials(name) {
+            var words = name.trim().split(/\s+/);
+            if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+            return (words[0][0] + words[1][0]).toUpperCase();
+        }
+
+        // Play styles. Older saves may also have a "modes" list or "Auto-detect".
+        function modesFor(g) {
+            if (g.modes && g.modes.length) return g.modes;
+            return (g.playStyle && g.playStyle !== 'Auto-detect') ? [g.playStyle] : [];
+        }
+        function hasPlayStyle(g, style) {
+            return g.playStyle === style || (g.modes || []).indexOf(style) >= 0;
+        }
+        function modesLabel(g) { return modesFor(g).join(', '); }
+        function styleLabel(g) { return modesLabel(g) || 'Unknown'; }
+
+        function emptyMessage(text) {
+            var p = document.createElement('p');
+            p.className = 'empty-state';
+            p.textContent = text;
+            return p;
+        }
+
+        function isUnplayed(g) { return !g.lastPlayedAt && !(g.totalMinutes > 0); }
+
+        // Positions of games that pass a test, optionally sorted and limited
+        function pickIndexes(filterFn, cmp, limit) {
+            var idx = [];
+            games.forEach(function (g, i) { if (!filterFn || filterFn(g)) idx.push(i); });
+            if (cmp) idx.sort(cmp);
+            return limit ? idx.slice(0, limit) : idx;
+        }
+
+        function note_played(g) { return 'Played ' + formatLastPlayed(g.lastPlayedAt) + ' · ' + formatPlayTime(g.totalMinutes); }
+        function note_platform(g) { return g.platform + (modesLabel(g) ? ' · ' + modesLabel(g) : ''); }
+
+        // Opens a game on the Library page (library.html?game=3)
+        function openGame(index) {
+            window.location.href = 'library.html?game=' + index;
+        }
+
+        // ================================================================
+        // Small game cards (Home, Discover, "Surprise me")
+        // ================================================================
+        function miniCard(i, note) {
+            var g = games[i];
+            var card = document.createElement('article');
+            card.className = 'mini-card';
+            var cover = document.createElement('div');
+            cover.className = 'mini-cover ' + shelfCovers[i % shelfCovers.length];
+            cover.textContent = initials(g.title);
+            cover.addEventListener('click', function () { openGame(i); });
+            var body = document.createElement('div');
+            body.className = 'mini-body';
+            var name = document.createElement('strong');
+            name.textContent = g.title;
+            name.addEventListener('click', function () { openGame(i); });
+            var sub = document.createElement('span');
+            sub.textContent = note;
+            var play = document.createElement('button');
+            play.type = 'button';
+            play.className = 'play-button play-button-small';
+            play.textContent = '▶ Play';
+            play.addEventListener('click', function () { launcher.launchAt(i); });
+            body.appendChild(name);
+            body.appendChild(sub);
+            body.appendChild(play);
+            card.appendChild(cover);
+            card.appendChild(body);
+            return card;
+        }
+
+        // A heading + grid of mini cards (or null if there are no games)
+        function gameSection(title, idxs, noteFn, className) {
+            if (!idxs.length) return null;
+            var sec = document.createElement('section');
+            sec.className = className;
+            var h = document.createElement('h2');
+            h.textContent = title;
+            var grid = document.createElement('div');
+            grid.className = 'mini-grid';
+            idxs.forEach(function (i) { grid.appendChild(miniCard(i, noteFn(games[i]))); });
+            sec.appendChild(h);
+            sec.appendChild(grid);
+            return sec;
+        }
+
+        // ================================================================
+        // Saving and loading (the library lives in the browser's localStorage,
+        // so every page sees the same games)
+        // ================================================================
+        var STORAGE_KEY = 'gamecentral-games';
+
+        function loadGames() {
+            try {
+                var saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                var list = Array.isArray(saved) ? saved : [];
+                // Older saves may be missing these, so fill in defaults
+                list.forEach(function (game) {
+                    if (typeof game.totalMinutes !== 'number') game.totalMinutes = 0;
+                    if (typeof game.lastPlayedAt !== 'number') game.lastPlayedAt = null;
+                });
+                return list;
+            } catch (err) {
+                console.error('Could not read saved games:', err);
+                return [];
+            }
+        }
+
+        function saveGames() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+            } catch (err) {
+                console.error('Could not save games:', err);
+                alert('Could not save your library - browser storage may be full. Try removing a game.');
+            }
+        }
+
+        games = loadGames();
+
+        // ================================================================
+        // ADD GAME WINDOW (opened by "+ Add Game")
+        // Written once here and added to every page, so the pages stay short.
+        // (Backslashes are doubled because this is inside a JS string.)
+        // ================================================================
+        document.body.insertAdjacentHTML('beforeend', `
+        <div class="modal-backdrop" id="add-game-backdrop">
+            <div class="modal add-game-modal">
+                <div class="modal-header">
+                    <h2>Add a Game</h2>
+                    <button type="button" class="modal-close" id="close-add-game" aria-label="Close">×</button>
+                </div>
+                <form id="add-game-form">
+                    <!-- 1. Platform -->
+                    <div class="filter-field">
+                        <label for="new-game-platform">Platform</label>
+                        <select id="new-game-platform">
+                            <option>Steam</option>
+                            <option>Epic Games</option>
+                            <option>Battle.net</option>
+                        </select>
+                    </div>
+
+                    <!-- 2. Pick from installed games (only the chosen platform's box is shown) -->
+                    <section class="import-card" id="steam-import-row" style="display:none;">
+                        <div class="import-card-head">
+                            <span class="import-card-title">Installed Steam games</span>
+                            <button type="button" class="link-button" id="steam-clear-button" style="display:none;">Clear list</button>
+                        </div>
+                        <div class="import-card-pick">
+                            <select id="steam-game-select" aria-label="Installed Steam games"></select>
+                            <button type="button" class="toolbar-button" id="steam-files-button">Load…</button>
+                        </div>
+                        <input type="file" id="steam-files-input" accept=".acf" multiple hidden>
+                        <p class="field-hint status" id="steam-import-status"></p>
+                        <details class="help">
+                            <summary>Where are these files?</summary>
+                            <p>Click <b>Load…</b>, open <code>C:\\Program Files (x86)\\Steam\\steamapps</code> and select all the <code>appmanifest_….acf</code> files. Another Steam library (e.g. <code>D:\\SteamLibrary\\steamapps</code>)? Load it too — it adds to the list.</p>
+                        </details>
+                    </section>
+
+                    <section class="import-card" id="epic-import-row" style="display:none;">
+                        <div class="import-card-head">
+                            <span class="import-card-title">Installed Epic games</span>
+                            <button type="button" class="link-button" id="epic-clear-button" style="display:none;">Clear list</button>
+                        </div>
+                        <div class="import-card-pick">
+                            <select id="epic-game-select" aria-label="Installed Epic games"></select>
+                            <button type="button" class="toolbar-button" id="epic-folder-button">Load…</button>
+                        </div>
+                        <input type="file" id="epic-folder-input" webkitdirectory multiple hidden>
+                        <p class="field-hint status" id="epic-import-status"></p>
+                        <details class="help">
+                            <summary>Where are these files?</summary>
+                            <p>Click <b>Load…</b> and paste <code>C:\\ProgramData\\Epic\\EpicGamesLauncher\\Data\\Manifests</code> into the address bar (ProgramData is hidden). Game missing? Load the folder your games are installed in instead, e.g. <code>D:\\Epic Games</code>.</p>
+                        </details>
+                    </section>
+
+                    <section class="import-card" id="battle-import-row" style="display:none;">
+                        <div class="import-card-head">
+                            <span class="import-card-title">Installed Battle.net games</span>
+                            <button type="button" class="link-button" id="battle-clear-button" style="display:none;">Clear list</button>
+                        </div>
+                        <div class="import-card-pick">
+                            <select id="battle-game-select" aria-label="Installed Battle.net games"></select>
+                            <button type="button" class="toolbar-button" id="battle-files-button">Load…</button>
+                        </div>
+                        <input type="file" id="battle-files-input" accept=".db" hidden>
+                        <p class="field-hint status" id="battle-import-status"></p>
+                        <details class="help">
+                            <summary>Where is this file?</summary>
+                            <p>Click <b>Load…</b>, paste <code>C:\\ProgramData\\Battle.net\\Agent</code> into the address bar (ProgramData is hidden) and pick <code>product.db</code>. Not installed yet? Just type the name below — known Battle.net games fill in by themselves.</p>
+                        </details>
+                    </section>
+
+                    <div class="form-divider"><span>Game details</span></div>
+
+                    <!-- 3. Name, Launch ID and play style -->
+                    <div class="filter-field">
+                        <label for="new-game-name">Game Name</label>
+                        <input type="text" id="new-game-name" placeholder="e.g. Skyward Ashes" required>
+                    </div>
+                    <div class="filter-field">
+                        <label for="new-game-launch-id">Launch ID <span class="optional">optional — powers the Play button</span></label>
+                        <input type="text" id="new-game-launch-id" placeholder="1245620">
+                        <p class="field-hint status" id="steam-lookup-status"></p>
+                        <p class="field-hint status" id="epic-lookup-status"></p>
+                        <p class="field-hint status" id="battle-lookup-status"></p>
+                        <p class="field-hint" id="launch-id-hint"></p>
+                    </div>
+
+                    <details class="help" id="steam-autofill-row" style="display:none;">
+                        <summary>Not installed or not found? Get the ID from Steam</summary>
+                        <button type="button" class="toolbar-button" id="steam-search-button">Search Steam for this name ↗</button>
+                        <input type="text" id="steam-url-input" placeholder="Paste the store link or App ID">
+                        <p class="field-hint status" id="steam-autofill-status"></p>
+                    </details>
+
+                    <div class="filter-field">
+                        <label for="new-game-play-style">Play Style</label>
+                        <select id="new-game-play-style">
+                            <option value="">Not set</option>
+                            <option>Single Player</option>
+                            <option>Multiplayer</option>
+                            <option>Co-op</option>
+                        </select>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="toolbar-button" id="cancel-add-game">Cancel</button>
+                        <button type="submit" class="match-button">Add Game</button>
+                    </div>
+                </form>
+            </div>
+        </div>`);
+
+        // ================================================================
+        // Adding games (see ImportGame.js)
+        // ================================================================
+        new ImportGame({
+            onGameImported: function (game) {
+                games.push(game);
+                saveGames();
+                onGameAdded(games.length - 1);
+            }
+        });
+
+        // ================================================================
+        // Launching games (see LaunchGame.js)
+        // The big Play button only exists on library.html; elsewhere it's null.
+        // ================================================================
+        var launcher = new LaunchGame({
+            playButton: document.getElementById('featured-play-button'),
+            getSelectedGame: function () {
+                var game = games[selectedIndex];
+                return game ? { game: game, index: selectedIndex } : null;
+            },
+            getGameAt: function (index) { return games[index]; },
+            onSessionEnded: function () {
+                saveGames();
+                renderPage();
+            }
+        });
+
+        // ================================================================
+        // Library page state
+        // ================================================================
+        // Home/Discover open a game with library.html?game=3
+        var requested = parseInt(new URLSearchParams(window.location.search).get('game'), 10);
+        selectedIndex = games[requested] ? requested : (games.length ? 0 : -1);
+
+        var searchQuery = '';       // sidebar search text
+        var launcherFilter = 'all'; // sidebar tab: 'all' | 'Steam' | 'Epic Games' | 'Battle.net'
+
+        // Sidebar headings, in order. Any other platform goes under "Other".
+        var SIDEBAR_GROUPS = [
+            { key: 'Steam', label: 'STEAM' },
+            { key: 'Epic Games', label: 'EPIC GAMES' },
+            { key: 'Battle.net', label: 'BATTLE.NET' },
+            { key: 'other', label: 'OTHER' }
+        ];
+        function groupKeyFor(game) {
+            return ['Steam', 'Epic Games', 'Battle.net'].indexOf(game.platform) !== -1 ? game.platform : 'other';
+        }
+
+        var gameList = document.getElementById('game-list');
+        var gameShelf = document.getElementById('game-shelf');
+        var allGamesGrid = document.getElementById('all-games-grid');
+        var featuredEmpty = document.getElementById('featured-empty');
+        var featuredGame = document.getElementById('featured-game');
+        var featuredCategory = document.querySelector('.featured-category');
+        var featuredTitle = document.querySelector('.art-content h2');
+        var featuredDescription = document.querySelector('.art-content p');
+        var featuredLastPlayed = document.getElementById('featured-last-played');
+        var featuredPlayTime = document.getElementById('featured-play-time');
+
+        // ================================================================
+        // Drawing the page
+        // ================================================================
+
+        // Sidebar: games grouped by platform, filtered by tab and search.
+        // Each row remembers its game's position (i) so clicks still work while filtered.
+        function renderSidebar() {
+            var query = searchQuery.toLowerCase();
+            var shown = 0;
+            gameList.innerHTML = '';
+
+            var buckets = { 'Steam': [], 'Epic Games': [], 'Battle.net': [], 'other': [] };
+            games.forEach(function (game, i) {
+                if (launcherFilter !== 'all' && game.platform !== launcherFilter) return;
+                if (query &&
+                    game.title.toLowerCase().indexOf(query) === -1 &&
+                    game.platform.toLowerCase().indexOf(query) === -1) {
+                    return;
+                }
+                buckets[groupKeyFor(game)].push(i);
+            });
+
+            SIDEBAR_GROUPS.forEach(function (group) {
+                var indexes = buckets[group.key];
+                if (!indexes.length) return;
+                shown += indexes.length;
+
+                var heading = document.createElement('div');
+                heading.className = 'sidebar-group-title';
+                heading.textContent = group.label + ' (' + indexes.length + ')';
+                gameList.appendChild(heading);
+
+                indexes.forEach(function (i) {
+                    var game = games[i];
+                    var link = document.createElement('a');
+                    link.href = '#';
+                    link.className = 'sidebar-game' + (i === selectedIndex ? ' selected' : '');
+                    link.dataset.index = i;
+                    link.innerHTML =
+                        '<div class="sidebar-game-icon ' + iconColors[i % iconColors.length] + '"></div>' +
+                        '<div class="sidebar-game-info"><strong></strong><span></span></div>' +
+                        '<button type="button" class="play-button sidebar-launch" title="Launch">▶</button>';
+                    link.querySelector('.sidebar-game-icon').textContent = initials(game.title);
+                    link.querySelector('strong').textContent = game.title;
+                    link.querySelector('span').textContent = game.platform;
+                    link.querySelector('.sidebar-launch').setAttribute('aria-label', 'Launch ' + game.title);
+                    gameList.appendChild(link);
+                });
+            });
+
+            if (games.length > 0 && shown === 0) {
+                gameList.appendChild(emptyMessage(searchQuery
+                    ? 'No games match “' + searchQuery + '”.'
+                    : 'No ' + launcherFilter + ' games yet.'));
+            }
+        }
+
+        // The big card for the selected game
+        function renderFeatured() {
+            var game = games[selectedIndex];
+            if (!game) {
+                featuredGame.style.display = 'none';
+                featuredEmpty.style.display = '';
+                return;
+            }
+            featuredEmpty.style.display = 'none';
+            featuredGame.style.display = '';
+            featuredCategory.textContent = (game.platform || 'LIBRARY').toUpperCase();
+            featuredTitle.textContent = game.title;
+            featuredDescription.textContent = 'Jump into ' + game.title + '.';
+            featuredLastPlayed.textContent = formatLastPlayed(game.lastPlayedAt);
+            featuredPlayTime.textContent = formatPlayTime(game.totalMinutes);
+            document.getElementById('featured-playstyle').textContent = styleLabel(game);
+        }
+
+        // "Recently Added": the newest 4 games, newest first
+        function renderShelf() {
+            gameShelf.innerHTML = '';
+            if (games.length === 0) {
+                gameShelf.appendChild(emptyMessage('Games you add will show up here.'));
+                return;
+            }
+            games.slice(-4).reverse().forEach(function (game, i) {
+                var card = document.createElement('article');
+                card.className = 'library-game-card';
+                card.innerHTML =
+                    '<div class="library-cover ' + shelfCovers[i % shelfCovers.length] + '"><div class="cover-title"></div></div>' +
+                    '<div class="library-game-details"><h3></h3><p></p></div>';
+                card.querySelector('.cover-title').textContent = game.title;
+                card.querySelector('h3').textContent = game.title;
+                card.querySelector('p').textContent = game.platform;
+                gameShelf.appendChild(card);
+            });
+        }
+
+        // "All Games": every game, newest first
+        function renderAllGames() {
+            allGamesGrid.innerHTML = '';
+            if (games.length === 0) {
+                allGamesGrid.appendChild(emptyMessage('Your library is empty.'));
+                return;
+            }
+            games.slice().reverse().forEach(function (game, i) {
+                var card = document.createElement('article');
+                card.className = 'small-game-card';
+                card.innerHTML =
+                    '<div class="small-cover ' + gridCovers[i % gridCovers.length] + '"></div>' +
+                    '<div><h3></h3><p></p></div>';
+                card.querySelector('.small-cover').textContent = initials(game.title);
+                card.querySelector('h3').textContent = game.title;
+                card.querySelector('p').textContent = game.platform + (modesLabel(game) ? ' · ' + modesLabel(game) : '');
+                allGamesGrid.appendChild(card);
+            });
+        }
+
+        renderPage = function () {
+            renderSidebar();
+            renderFeatured();
+            renderShelf();
+            renderAllGames();
+        };
+
+        // ================================================================
+        // Sidebar: clicking games, platform tabs, search
+        // ================================================================
+        gameList.addEventListener('click', function (event) {
+            var gameLink = event.target.closest('.sidebar-game');
+            if (!gameLink) return;
+            event.preventDefault();
+            selectedIndex = Number(gameLink.dataset.index);
+            var launchClicked = !!event.target.closest('.sidebar-launch');
+            renderSidebar();
+            renderFeatured();
+            if (launchClicked) launcher.launchAt(selectedIndex); // the ▶ button
+        });
+
+        document.getElementById('launcher-tabs').addEventListener('click', function (event) {
+            var tab = event.target.closest('[data-launcher]');
+            if (!tab) return;
+            launcherFilter = tab.dataset.launcher;
+            document.querySelectorAll('#launcher-tabs .filter-small').forEach(function (b) {
+                b.classList.toggle('active', b === tab);
+            });
+            renderSidebar();
+        });
+
+        function clearSearch() {
+            $('#search-input').val('');
+            searchQuery = '';
+        }
+
+        $(function () {
+            $('#search-input').on('input', function () {
+                searchQuery = $(this).val().trim();
+                renderSidebar();
+            });
+        });
+
+        // ================================================================
+        // Removing a game
+        // ================================================================
+        function removeGameAt(index) {
+            var game = games[index];
+            if (!game) return;
+            if (!confirm('Remove "' + game.title + '" from your library?')) return;
+
+            // If a game is being timed, keep the timer pointing at the right game,
+            // since every game after the removed one moves up a place.
+            var session = launcher.activeSession;
+            if (session) {
+                if (session.gameIndex === index) launcher.activeSession = null;
+                else if (session.gameIndex > index) session.gameIndex--;
+            }
+
+            games.splice(index, 1);
+            saveGames();
+            selectedIndex = games.length ? Math.min(index, games.length - 1) : -1;
+            renderPage();
+        }
+
+        document.getElementById('remove-game-button').addEventListener('click', function () {
+            removeGameAt(selectedIndex);
+        });
+
+        // A newly added game gets selected and shown in the sidebar
+        onGameAdded = function (index) {
+            selectedIndex = index;
+            clearSearch();
+            renderPage();
+        };
+
+        renderPage();
+    </script>
+</body>
+</html>

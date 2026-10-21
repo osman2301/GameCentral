@@ -803,3 +803,89 @@ input {
     gap: 8px;
     margin-top: 6px;
 }
+
+/* =========================================
+   (Moved here from index.html's <style> block)
+========================================= */
+
+/* "Nothing here yet" messages */
+.empty-state { color: #8f98a0; font-size: 14px; padding: 16px 0; margin: 0; }
+
+/* ---- Home + Discover: sections and small game cards ---- */
+.disc-section, .home-section { margin-bottom: 32px; }
+.disc-note { color: var(--text-dim); margin: 4px 0 14px; font-size: 14px; }
+.mini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; margin-top: 12px; }
+.mini-card { background: var(--panel, #16202d); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); overflow: hidden; }
+.mini-cover { height: 100px; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: #fff; cursor: pointer; }
+.mini-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
+.mini-body strong { color: var(--text-bright); font-size: 14px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini-body span { color: var(--text-dim); font-size: 12px; }
+.mini-body .play-button { margin-top: 6px; }
+.pick-card { max-width: 260px; margin-top: 16px; }
+
+/* ---- Discover: store links and Steam search ---- */
+.store-links { display: flex; flex-wrap: wrap; gap: 10px; }
+.store-links a { color: var(--text-bright); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 9px 14px; font-size: 13px; text-decoration: none; }
+.store-links a:hover { border-color: var(--text-dim); }
+.store-search { display: flex; gap: 10px; margin-top: 14px; max-width: 420px; }
+.store-search input { flex: 1; }
+
+/* ---- Home banner: bigger, with a shadow, and pops in ---- */
+.home-hero { box-shadow: 0 10px 36px rgba(0, 0, 0, 0.5); }
+.home-hero .featured-art { min-height: 280px; }
+.home-hero .art-content h2 { font-size: 40px; }
+.hero-pop { animation: heroPop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+@keyframes heroPop {
+    from { opacity: 0; transform: scale(0.94) translateY(16px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* ---- Buttons on the big game card (Remove / Play) ---- */
+.featured-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.ghost-button {
+    background: transparent; color: var(--text-dim); border: 1px solid var(--border-subtle);
+    font-size: 13px; padding: 9px 16px; border-radius: var(--radius-sm);
+}
+.ghost-button:hover { color: var(--text-bright); border-color: var(--text-dim); }
+.remove-button:hover { color: #ff7b7b; border-color: #ff7b7b; }
+
+/* ---- Add Game window ---- */
+.field-hint { color: var(--text-dim); font-size: 12px; line-height: 1.5; margin: -8px 0 14px; }
+.field-hint code { background: var(--bg-card); padding: 1px 4px; border-radius: 2px; }
+.add-game-modal { width: 460px; max-height: calc(100vh - 40px); overflow-y: auto; }
+.add-game-modal .field-hint { margin: 2px 0 0; }
+.add-game-modal .field-hint:empty { display: none; } /* hide empty message lines */
+.add-game-modal .status { color: var(--text-muted); }
+.add-game-modal .status.error { color: #ff6b6b; } /* "not found" / "not installed" messages */
+.add-game-modal .optional { color: var(--text-dim); font-weight: 400; margin-left: 4px; }
+#add-game-form .filter-field select,
+#add-game-form .filter-field input[type="text"] { width: 100%; }
+
+/* "Installed ... games" boxes */
+.import-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; margin-bottom: 14px; }
+.import-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.import-card-title { color: var(--text-bright); font-size: 13px; font-weight: 600; }
+.import-card-pick { display: flex; gap: 6px; }
+.import-card-pick select {
+    flex: 1; min-width: 0;
+    background: var(--bg-panel); border: 1px solid var(--border-subtle); color: var(--text-primary);
+    padding: 8px 10px; border-radius: var(--radius-sm); font-size: 13px;
+}
+.import-card-pick select:disabled { color: var(--text-dim); }
+.import-card-pick .toolbar-button { white-space: nowrap; padding: 8px 12px; }
+.link-button { background: none; border: none; color: var(--blue-accent); font-size: 12px; padding: 0; }
+.link-button:hover { color: var(--text-bright); text-decoration: underline; }
+
+/* Click-to-open help sections */
+.help { margin-top: 8px; font-size: 12px; color: var(--text-dim); }
+.help summary { cursor: pointer; color: var(--text-muted); font-size: 12px; }
+.help summary:hover { color: var(--text-bright); }
+.help p { margin: 6px 0 0; line-height: 1.5; }
+.help code { background: var(--bg-panel); padding: 1px 4px; border-radius: 2px; word-break: break-all; }
+#steam-autofill-row { margin: -4px 0 14px; }
+#steam-autofill-row[open] { display: flex; flex-direction: column; gap: 8px; }
+#steam-autofill-row .toolbar-button { align-self: flex-start; margin-top: 4px; }
+
+/* "GAME DETAILS" divider line */
+.form-divider { display: flex; align-items: center; gap: 10px; margin: 4px 0 12px; color: var(--text-dim); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.form-divider::before, .form-divider::after { content: ""; flex: 1; border-top: 1px solid var(--border-subtle); }

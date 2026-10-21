@@ -10,7 +10,7 @@ class LaunchGame {
     static MIN_SESSION_MS = 15000; // 15 seconds
 
     constructor(options) {
-        this.playButton = options.playButton;
+        this.playButton = options.playButton; // may be null on Home / Discover
         this.getSelectedGame = options.getSelectedGame;
         this.getGameAt = options.getGameAt;
         this.onSessionEnded = options.onSessionEnded; // the app saves + redraws here
@@ -26,7 +26,8 @@ class LaunchGame {
         });
         window.addEventListener('focus', this.endActiveSession);
 
-        this.playButton.addEventListener('click', this.handlePlayClick);
+        // The big Play button only exists on the Library page
+        if (this.playButton) this.playButton.addEventListener('click', this.handlePlayClick);
     }
 
     // ---- Launch links ----

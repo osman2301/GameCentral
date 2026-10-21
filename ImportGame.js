@@ -27,6 +27,12 @@ class ImportGame {
     static EPIC_STORAGE_KEY = 'gamecentral-epic-games';
     static BATTLENET_STORAGE_KEY = 'gamecentral-battlenet-installed';
 
+    // Shows a message under a field. Error messages (isError = true) are shown in red.
+    static setStatus(el, text, isError) {
+        el.textContent = text;
+        el.classList.toggle('error', !!isError);
+    }
+
     constructor(options) {
         this.onGameImported = options.onGameImported; // the app saves + shows the new game
 
@@ -114,7 +120,9 @@ class ImportGame {
 
         // Opening and closing the window
         document.getElementById('open-add-game').addEventListener('click', () => this.openModal());
-        document.getElementById('open-add-game-small').addEventListener('click', () => this.openModal());
+        // The small "+" only exists on the Library page
+        const smallAdd = document.getElementById('open-add-game-small');
+        if (smallAdd) smallAdd.addEventListener('click', () => this.openModal());
         document.getElementById('close-add-game').addEventListener('click', () => this.closeModal());
         document.getElementById('cancel-add-game').addEventListener('click', () => this.closeModal());
         this.backdrop.addEventListener('click', (event) => {
@@ -157,8 +165,8 @@ class ImportGame {
             this.maybeAutoLookupSteam();
         } else {
             this.steamUrlInput.value = '';
-            this.steamAutofillStatus.textContent = '';
-            this.steamLookupStatus.textContent = '';
+            ImportGame.setStatus(this.steamAutofillStatus, '');
+            ImportGame.setStatus(this.steamLookupStatus, '');
         }
 
         const isEpic = platform === 'Epic Games';
@@ -167,13 +175,13 @@ class ImportGame {
             this.renderEpicSelect();
             this.maybeAutoLookupEpic();
         } else {
-            this.epicLookupStatus.textContent = '';
+            ImportGame.setStatus(this.epicLookupStatus, '');
         }
 
         const isBattle = platform === 'Battle.net';
         this.battleImportRow.style.display = isBattle ? '' : 'none';
         if (isBattle) this.maybeAutoLookupBattle();
-        else this.battleLookupStatus.textContent = '';
+        else ImportGame.setStatus(this.battleLookupStatus, '');
     }
 
     // Builds the new game from the form and gives it to the app
@@ -291,6 +299,17 @@ class ImportGame {
         }
     }
 
+    // True if each typed word is the start of a name word, in the same order
+    static wordsStartWords(qWords, nameWords) {
+        let j = 0;
+        for (const w of qWords) {
+            while (j < nameWords.length && !nameWords[j].startsWith(w)) j++;
+            if (j === nameWords.length) return false;
+            j++;
+        }
+        return true;
+    }
+
     findSteamMatch(query) {
         this.buildSteamIndex();
         const q = ImportGame.normalizeName(query);
@@ -300,7 +319,18 @@ class ImportGame {
         const exact = this.steamNameIndex.get(q);
         if (exact) return exact;
 
-        // 2. A name that contains what you typed (most popular first)
+        // 2. Every word you typed starts a word in the name, in order
+        //    (so "sim 4" finds "The Sims 4"; most popular first)
+        const qWords = q.split(' ');
+        for (let i = 0; i < STEAM_GAMES.length; i++) {
+            const norm = this.steamNormNames[i];
+            if (norm.length < 3) continue;
+            if (ImportGame.wordsStartWords(qWords, norm.split(' '))) {
+                return { id: STEAM_GAMES[i][0], name: STEAM_GAMES[i][1] };
+            }
+        }
+
+        // 3. A name that contains what you typed (most popular first)
         for (let i = 0; i < STEAM_GAMES.length; i++) {
             const norm = this.steamNormNames[i];
             if (norm.length < 3) continue;
@@ -309,7 +339,7 @@ class ImportGame {
             }
         }
 
-        // 3. Closest typo match among names of a similar length
+        // 4. Closest typo match among names of a similar length
         let best = null, bestDist = Infinity;
         for (let i = 0; i < STEAM_GAMES.length; i++) {
             const norm = this.steamNormNames[i];
@@ -334,7 +364,7 @@ class ImportGame {
         const name = this.nameInput.value.trim();
         clearTimeout(this.steamLookupTimer);
         if (name.length < 3) {
-            this.steamLookupStatus.textContent = '';
+            ImportGame.setStatus(this.steamLookupStatus, '');
             return;
         }
 
@@ -342,15 +372,22 @@ class ImportGame {
             const installed = ImportGame.findListMatch(this.steamInstalled, name);
             if (installed) {
                 this.launchIdInput.value = installed.id;
-                this.steamLookupStatus.textContent = 'Matched installed game "' + installed.name + '" — Launch ID ' + installed.id + ' filled in.';
+                ImportGame.setStatus(this.steamLookupStatus, 'Matched installed game "' + installed.name + '" — Launch ID ' + installed.id + ' filled in.');
                 return;
             }
             const match = this.findSteamMatch(name);
-            if (match) {
+            if (match && this.steamInstalled.length) {
+                // Your installed list is loaded and this game isn't in it
                 this.launchIdInput.value = match.id;
-                this.steamLookupStatus.textContent = 'Matched "' + match.name + '" — Launch ID ' + match.id + ' filled in.';
+                ImportGame.setStatus(this.steamLookupStatus, 'Matched "' + match.name + '" (Launch ID ' + match.id + '), but it isn\'t in your installed Steam games. ' +
+                    'You can still add it — Play will open it in Steam so you can install it.', true);
+            } else if (match) {
+                // No installed list loaded, so we can't tell if it's installed
+                this.launchIdInput.value = match.id;
+                ImportGame.setStatus(this.steamLookupStatus, 'Matched "' + match.name + '" — Launch ID ' + match.id + ' filled in. ' +
+                    'Load your installed Steam games above to check whether it\'s installed.');
             } else {
-                this.steamLookupStatus.textContent = 'No match in the local Steam list — enter the ID manually or use the fallback below.';
+                ImportGame.setStatus(this.steamLookupStatus, 'No match in the local Steam list — enter the ID manually or use the fallback below.', true);
             }
         }, 200);
     }
@@ -362,11 +399,11 @@ class ImportGame {
         const appId = /^\d+$/.test(value) ? value : (fromLink ? fromLink[1] : null);
         if (appId) {
             this.launchIdInput.value = appId;
-            this.steamAutofillStatus.textContent = 'Found App ID ' + appId + ' — filled in above.';
+            ImportGame.setStatus(this.steamAutofillStatus, 'Found App ID ' + appId + ' — filled in above.');
         } else if (value) {
-            this.steamAutofillStatus.textContent = 'Couldn\'t find an App ID in that link — check it\'s a store.steampowered.com/app/ URL.';
+            ImportGame.setStatus(this.steamAutofillStatus, 'Couldn\'t find an App ID in that link — check it\'s a store.steampowered.com/app/ URL.', true);
         } else {
-            this.steamAutofillStatus.textContent = '';
+            ImportGame.setStatus(this.steamAutofillStatus, '');
         }
     }
 
@@ -386,17 +423,17 @@ class ImportGame {
         const files = Array.from(input.files || []).filter(f => /\.acf$/i.test(f.name));
         input.value = '';
         if (!files.length) {
-            this.steamImportStatus.textContent = 'No appmanifest_*.acf files picked. They are in C:\\Program Files (x86)\\Steam\\steamapps (and each other library\'s steamapps folder).';
+            ImportGame.setStatus(this.steamImportStatus, 'No appmanifest_*.acf files picked. They are in C:\\Program Files (x86)\\Steam\\steamapps (and each other library\'s steamapps folder).', true);
             return;
         }
-        this.steamImportStatus.textContent = 'Reading ' + files.length + ' file(s)…';
+        ImportGame.setStatus(this.steamImportStatus, 'Reading ' + files.length + ' file(s)…');
         Promise.all(files.map(f => f.text().then(t => ImportGame.steamEntryFromAcf(t, f.name), () => ({ skip: f.name + ' (unreadable)' }))))
             .then(results => {
                 const skipped = results.filter(r => r.skip).map(r => r.skip);
                 const skipNote = skipped.length ? ' Skipped: ' + skipped.join(', ') + '.' : '';
                 const found = results.filter(r => r.entry);
                 if (!found.length) {
-                    this.steamImportStatus.textContent = 'Found no installed games in those files.' + skipNote;
+                    ImportGame.setStatus(this.steamImportStatus, 'Found no installed games in those files.' + skipNote, true);
                     return;
                 }
                 // Add to the saved list, so loading a second Steam library adds to the first
@@ -406,8 +443,8 @@ class ImportGame {
                 this.steamInstalled = Array.from(byId.values()).sort((a, b) => a[1].localeCompare(b[1]));
                 ImportGame.saveList(ImportGame.STEAM_STORAGE_KEY, this.steamInstalled);
                 this.renderSteamSelect();
-                this.steamImportStatus.textContent = 'Read ' + found.length + ' game(s), ' + added + ' new. ' +
-                    this.steamInstalled.length + ' installed Steam game(s) in the list.' + skipNote;
+                ImportGame.setStatus(this.steamImportStatus, 'Read ' + found.length + ' game(s), ' + added + ' new. ' +
+                    this.steamInstalled.length + ' installed Steam game(s) in the list.' + skipNote);
                 this.maybeAutoLookupSteam();
             });
     }
@@ -422,14 +459,14 @@ class ImportGame {
         clearTimeout(this.steamLookupTimer);
         this.nameInput.value = g[1];
         this.launchIdInput.value = g[0];
-        this.steamLookupStatus.textContent = 'Launch ID ' + g[0] + ' for "' + g[1] + '" filled in.';
+        ImportGame.setStatus(this.steamLookupStatus, 'Launch ID ' + g[0] + ' for "' + g[1] + '" filled in.');
     }
 
     clearSteamInstalled() {
         this.steamInstalled = [];
         ImportGame.saveList(ImportGame.STEAM_STORAGE_KEY, []);
         this.renderSteamSelect();
-        this.steamImportStatus.textContent = 'List cleared. Load your appmanifest files again to rebuild it.';
+        ImportGame.setStatus(this.steamImportStatus, 'List cleared. Load your appmanifest files again to rebuild it.');
     }
 
     // ================================================================
@@ -474,10 +511,10 @@ class ImportGame {
         const files = Array.from(input.files || []).filter(f => /\.(item|dat|mancpn)$/i.test(f.name));
         input.value = '';
         if (!files.length) {
-            this.epicImportStatus.textContent = 'No .item files found there. Pick the Manifests folder: C:\\ProgramData\\Epic\\EpicGamesLauncher\\Data\\Manifests';
+            ImportGame.setStatus(this.epicImportStatus, 'No .item files found there. Pick the Manifests folder: C:\\ProgramData\\Epic\\EpicGamesLauncher\\Data\\Manifests', true);
             return;
         }
-        this.epicImportStatus.textContent = 'Reading ' + files.length + ' file(s)…';
+        ImportGame.setStatus(this.epicImportStatus, 'Reading ' + files.length + ' file(s)…');
         Promise.all(files.map(f => f.text().then(t => {
             let data;
             try { data = JSON.parse(t.replace(/^\uFEFF/, '')); } catch (e) { return [{ skip: f.name + ' (unreadable)' }]; }
@@ -502,13 +539,13 @@ class ImportGame {
         const list = Array.from(byId.values()).sort((a, b) => a[1].localeCompare(b[1]));
         const skipNote = skipped.length ? ' Skipped: ' + skipped.join(', ') + '.' : '';
         if (!list.length) {
-            this.epicImportStatus.textContent = label + ': found no installed games.' + skipNote;
+            ImportGame.setStatus(this.epicImportStatus, label + ': found no installed games.' + skipNote, true);
             return;
         }
         this.epicGames = list;
         ImportGame.saveList(ImportGame.EPIC_STORAGE_KEY, list);
         this.renderEpicSelect();
-        this.epicImportStatus.textContent = label + ': found ' + list.length + ' game(s): ' + list.map(g => g[1]).join(', ') + '.' + skipNote;
+        ImportGame.setStatus(this.epicImportStatus, label + ': found ' + list.length + ' game(s): ' + list.map(g => g[1]).join(', ') + '.' + skipNote);
         this.maybeAutoLookupEpic();
     }
 
@@ -520,7 +557,7 @@ class ImportGame {
         this.epicGames = [];
         ImportGame.saveList(ImportGame.EPIC_STORAGE_KEY, []);
         this.renderEpicSelect();
-        this.epicImportStatus.textContent = 'List cleared. Load your Epic files again to rebuild it.';
+        ImportGame.setStatus(this.epicImportStatus, 'List cleared. Load your Epic files again to rebuild it.');
     }
 
     pickEpicGame() {
@@ -528,7 +565,7 @@ class ImportGame {
         if (this.epicGameSelect.value === '' || !g) return;
         this.nameInput.value = g[1];
         this.launchIdInput.value = g[0];
-        this.epicLookupStatus.textContent = 'Launch ID for "' + g[1] + '" filled in.';
+        ImportGame.setStatus(this.epicLookupStatus, 'Launch ID for "' + g[1] + '" filled in.');
     }
 
     // Runs as you type: looks for the name in your installed Epic games
@@ -538,11 +575,11 @@ class ImportGame {
         const name = this.nameInput.value.trim();
         clearTimeout(this.epicLookupTimer);
         if (name.length < 3) {
-            this.epicLookupStatus.textContent = '';
+            ImportGame.setStatus(this.epicLookupStatus, '');
             return;
         }
         if (!this.epicGames.length) {
-            this.epicLookupStatus.textContent = 'Load your installed Epic games above to fill this in automatically.';
+            ImportGame.setStatus(this.epicLookupStatus, 'Load your installed Epic games above to fill this in automatically.');
             return;
         }
 
@@ -550,9 +587,9 @@ class ImportGame {
             const match = ImportGame.findListMatch(this.epicGames, name);
             if (match) {
                 this.launchIdInput.value = match.id;
-                this.epicLookupStatus.textContent = 'Matched "' + match.name + '" — Launch ID filled in.';
+                ImportGame.setStatus(this.epicLookupStatus, 'Matched "' + match.name + '" — Launch ID filled in.');
             } else {
-                this.epicLookupStatus.textContent = 'Not in your installed Epic games. You can still add it — Play will open it in the Epic Games Launcher so you can install it.';
+                ImportGame.setStatus(this.epicLookupStatus, 'Not in your installed Epic games. You can still add it — Play will open it in the Epic Games Launcher so you can install it.', true);
             }
         }, 200);
     }
@@ -610,22 +647,22 @@ class ImportGame {
         const file = Array.from(input.files || []).find(f => /\.db$/i.test(f.name));
         input.value = '';
         if (!file) {
-            this.battleImportStatus.textContent = 'Pick product.db from C:\\ProgramData\\Battle.net\\Agent';
+            ImportGame.setStatus(this.battleImportStatus, 'Pick product.db from C:\\ProgramData\\Battle.net\\Agent');
             return;
         }
         file.arrayBuffer().then(buf => {
             const list = ImportGame.battlenetFromProductDb(new Uint8Array(buf));
             if (!list.length) {
-                this.battleImportStatus.textContent = 'Found no installed Battle.net games in ' + file.name + '.';
+                ImportGame.setStatus(this.battleImportStatus, 'Found no installed Battle.net games in ' + file.name + '.', true);
                 return;
             }
             this.battleInstalled = list.sort((a, b) => a[1].localeCompare(b[1]));
             ImportGame.saveList(ImportGame.BATTLENET_STORAGE_KEY, this.battleInstalled);
             this.renderBattleSelect();
-            this.battleImportStatus.textContent = 'Found ' + list.length + ' game(s): ' + list.map(g => g[1]).join(', ') + '.';
+            ImportGame.setStatus(this.battleImportStatus, 'Found ' + list.length + ' game(s): ' + list.map(g => g[1]).join(', ') + '.');
             this.maybeAutoLookupBattle();
         }, () => {
-            this.battleImportStatus.textContent = 'Couldn\'t read ' + file.name + '.';
+            ImportGame.setStatus(this.battleImportStatus, 'Couldn\'t read ' + file.name + '.', true);
         });
     }
 
@@ -639,14 +676,14 @@ class ImportGame {
         clearTimeout(this.battleLookupTimer);
         this.nameInput.value = g[1];
         this.launchIdInput.value = g[0];
-        this.battleLookupStatus.textContent = 'Launch ID ' + g[0] + ' for "' + g[1] + '" filled in.';
+        ImportGame.setStatus(this.battleLookupStatus, 'Launch ID ' + g[0] + ' for "' + g[1] + '" filled in.');
     }
 
     clearBattleInstalled() {
         this.battleInstalled = [];
         ImportGame.saveList(ImportGame.BATTLENET_STORAGE_KEY, []);
         this.renderBattleSelect();
-        this.battleImportStatus.textContent = 'List cleared. Load product.db again to rebuild it.';
+        ImportGame.setStatus(this.battleImportStatus, 'List cleared. Load product.db again to rebuild it.');
     }
 
     // Runs as you type: installed games first, then every known Battle.net
@@ -655,16 +692,16 @@ class ImportGame {
         if (this.platformSelect.value !== 'Battle.net') return;
         const name = this.nameInput.value.trim();
         clearTimeout(this.battleLookupTimer);
-        if (name.length < 2) { this.battleLookupStatus.textContent = ''; return; }
+        if (name.length < 2) { ImportGame.setStatus(this.battleLookupStatus, ''); return; }
         this.battleLookupTimer = setTimeout(() => {
             const installed = ImportGame.findListMatch(this.battleInstalled, name);
             const known = installed || ImportGame.findListMatch(ImportGame.BATTLENET_GAMES.map(g => [g[0], g[1]]), name);
             if (known) {
                 this.launchIdInput.value = known.id;
-                this.battleLookupStatus.textContent = (installed ? 'Matched installed game "' : 'Matched "') + known.name + '" — Launch ID ' + known.id + ' filled in.' +
-                    (installed ? '' : ' If it isn\'t installed, Play opens it in Battle.net so you can install it.');
+                ImportGame.setStatus(this.battleLookupStatus, (installed ? 'Matched installed game "' : 'Matched "') + known.name + '" — Launch ID ' + known.id + ' filled in.' +
+                    (installed ? '' : ' If it isn\'t installed, Play opens it in Battle.net so you can install it.'));
             } else {
-                this.battleLookupStatus.textContent = 'Not a known Battle.net game — enter its product code by hand if you know it.';
+                ImportGame.setStatus(this.battleLookupStatus, 'Not a known Battle.net game — enter its product code by hand if you know it.', true);
             }
         }, 200);
     }
