@@ -1,247 +1,166 @@
 # GameCentral
 
-**GameCentral** is a video game library management application designed to help users organize, search, and launch games from multiple online gaming platforms in one centralized location.
+**GameCentral** is a browser-based video game library manager designed to help players organize games from multiple platforms in one centralized location.
 
-The project focuses on applying **Java and Object-Oriented Programming (OOP)** principles to create a modular, organized, and maintainable application.
+The application supports games from online gaming platforms, allowing users to manage their collections, discover games to play, and launch supported games through their original platforms.
 
-## Project Overview
+GameCentral is developed using **HTML, CSS, and object-oriented JavaScript**.
 
-Many players own games across multiple online platforms. Managing games across different platforms can make it difficult to organize a collection and decide what to play.
+## Features
 
-GameCentral aims to solve this problem by providing a centralized game library where users can manage their games and find something to play.
+### 1. Home Page
+- Displays the user's most recently played game.
+- Shows previously played games.
+- Provides navigation between Home, Library, and Discover.
+- Displays game information, including platform, play style, and estimated playtime.
 
-The application is designed to allow users to:
+### 2. Game Library
+- Stores games from online gaming platforms.
+- Allows users to manually add games.
+- Displays saved games in a centralized library.
+- Allows searching by game title and filtering by platform.
+- Supports removing games from the library.
 
-- Add games to their library.
-- View games from multiple platforms.
-- Search for games by title or platform.
-- Filter games based on preferences.
-- Select and launch supported games.
-- Track recently played games and estimated playtime.
+### 3. Import Game Library
+GameCentral allows users to import game information from supported local launcher files.
 
-## Project Goal
 
-The main goal of GameCentral is to simplify video game library management while demonstrating Object-Oriented Programming principles.
+Players can select detected games from the import interface and add them to their central library.
 
-The project emphasizes:
+**Note:** The current implementation imports information from files selected on the user's computer. It does not directly authenticate with online gaming accounts or automatically synchronize entire online game libraries.
 
-- Encapsulation
-- Abstraction
-- Single Responsibility Principle
-- Separation of concerns
-- Modular application design
+### 4. Launch Games
+- Allows users to select games from their library.
+- Validates available launch information.
+- Generates platform-specific launch URLs.
+- Supports launch requests through Steam, Epic Games, and Battle.net.
+- Provides warnings when launch information is missing or unavailable.
+- Can direct users to a platform store when direct launching is unavailable.
 
-Each class will have a clearly defined responsibility to make the application easier to maintain and expand.
+GameCentral attempts to open the appropriate game launcher. Actual launch success depends on the installed launcher, browser permissions, and valid game information.
 
-## Current Features
+### 5. Discover Games
+- Provides a **Surprise Me** feature that randomly selects a game from the user's library.
+- Allows filtering recommendations by play style.
+- Recommends revisiting games that have not been played recently.
+- Provides links to supported gaming storefronts.
 
-### 1. Import Games
+### 6. Game Session Tracking
+- Records recent launch activity.
+- Estimates playtime based on the time between launching a game and returning to the browser.
+- Updates game activity and estimated playtime.
 
-Users can manually add games to their library.
 
-Game information includes:
+### 7. Local Storage
+GameCentral uses browser `localStorage` to save game information.
 
+Saved data includes:
 - Game title
-- Gaming platform
-- Launch ID (optional)
+- Platform
 - Play style
+- Launch ID
+- Estimated playtime
+- Last played information
 
-The existing JavaScript implementation also includes an offline Steam game catalog that can help identify Steam game IDs.
 
-### 2. Launch Games
-
-Users can select a game from their library and attempt to launch it using the appropriate gaming platform.
-
-The current JavaScript implementation supports launcher links for:
-
-- Steam
-- Epic Games
-- Blizzard Battle.net
-
-Launching a game requires a valid launch ID and the corresponding launcher installed on the user's computer.
-
-### 3. Game Library
-
-The Game Library allows users to:
-
-- View added games.
-- Search for games.
-- Select games from the sidebar.
-- View recently added games.
-- View game details.
-- Track estimated playtime.
-
-### 4. Game Filtering
-
-GameCentral provides filtering options to help users narrow down their game collection.
-
-The interface includes:
-
-- Genre
-- Play style
-- Time available
-
-Filtering functionality will continue to be expanded as the application develops.
-
-### 5. Playtime Tracking
-
-GameCentral includes basic estimated playtime tracking.
-
-When a supported game is launched, the application starts tracking a session. When the user returns to the browser, the elapsed time may be recorded.
-
-This feature estimates playtime rather than measuring the actual game process.
-
-## Object-Oriented Design
-
-The project is being transitioned toward a Java-based implementation using separate classes for different responsibilities.
-
-### Planned Java Classes
-
-| Class | Responsibility |
-|---|---|
-| `Game` | Represents a game and its information |
-| `GameLibrary` | Manages the collection of games |
-| `ImportGameController` | Handles the process of importing games |
-| `LaunchGameController` | Coordinates launching games |
-| `GameRepository` | Handles saving and retrieving game data |
-
-These are planned Java classes and have not yet been implemented in the provided project files.
-
-### OOP Principles
-
-**Encapsulation**
-
-Each Java class will manage its own data and related behaviors.
-
-**Abstraction**
-
-Classes will expose important operations while hiding unnecessary implementation details.
-
-**Single Responsibility Principle**
-
-Each class will focus on one primary responsibility. For example, importing games and launching games will be handled by separate controllers.
-
-**Separation of Concerns**
-
-User interface code, business logic, and data storage will be separated into different components.
-
-## Technologies Used
-
-### Current Implementation
-
-- HTML5 — Application structure
-- CSS3 — User interface styling
-- JavaScript — Current game library functionality
-- jQuery — Interface interactions
-- Browser localStorage — Local game data storage
-- Git — Version control
-- GitHub — Repository hosting and collaboration
-
-### Planned Implementation
-
-- Java — Object-oriented application logic
-- Java classes and objects — Game management
-- Database integration — Persistent storage, if required
-- Java unit testing — Testing application behavior
-
-Java is the intended implementation language for the business logic, but the current uploaded application still contains JavaScript logic.
-
-## Project Structure
-
-The current project files are:
-
-```text
-GameCentral/
-│
-├── ImportGame.js
-├── LaunchGame.js
-├── index.html
-├── style.css
-├── requirements.txt
-└── README.md
-```
 
 ### File Descriptions
 
 | File | Description |
 |---|---|
-| `ImportGame.js` | Contains the offline Steam game catalog used for game ID lookup |
-| `LaunchGame.js` | Handles platform-specific game launching and estimated playtime tracking |
-| `index.html` | Contains the user interface, game library, and application interactions |
-| `style.css` | Provides application styling |
-| `requirements.txt` | Contains the former Flask dependency and is no longer required for the static prototype |
-| `README.md` | Contains project documentation |
+| `index.html` | Home page |
+| `library.html` | Game library interface |
+| `discover.html` | Game discovery interface |
+| `Game.js` | Game object representation |
+| `CentralLibrary.js` | Central library management |
+| `PlatformLibrary.js` | Platform-specific game information |
+| `ImportController.js` | Game importing functionality |
+| `LaunchController.js` | Game launch coordination |
+| `OriginalPlatform.js` | External launcher integration |
+| `style.css` | Application styling |
+| `README.md` | Project documentation |
 
-## Getting Started
+## Installation and Setup
 
-### 1. Clone the Repository
+### Requirements
+- A modern web browser, such as Chrome, Firefox, Edge, or Safari
+- Visual Studio Code (recommended)
+- Live Server extension for VS Code (recommended)
+- Git (optional)
+
+No Java, Python, Flask, PHP, or database server is required.
+
+### Step 1: Clone the Repository
 
 ```bash
 git clone https://github.com/osman2301/GameCentral.git
 ```
 
-Navigate to the project directory:
+Navigate into the project:
 
 ```bash
 cd GameCentral
 ```
 
-### 2. Open the Application
+Alternatively, download the repository as a ZIP file from GitHub.
 
-The existing prototype uses HTML, CSS, and JavaScript.
+### Step 2: Open the Project
 
-For basic interface testing, open `index.html` in a web browser.
+1. Open Visual Studio Code.
+2. Select **File → Open Folder**.
+3. Open the `GameCentral` folder.
+4. Locate `index.html`.
 
-Alternatively, use a local development server such as VS Code Live Server.
+### Step 3: Run the Application
 
-**Note:** Browser security restrictions may affect some functionality when opening files directly.
+Using the Live Server extension:
 
-### 3. Add a Game
+1. Right-click `index.html`.
+2. Select **Open with Live Server**.
+3. The GameCentral Home page will open in your browser.
 
-1. Open the GameCentral library.
+You can navigate between Home, Library, and Discover.
+
+A local development server is recommended for consistent browser storage and file-handling behavior.
+
+## How to Use GameCentral
+
+### Adding a Game
+
+1. Open GameCentral.
 2. Click **+ Add Game**.
-3. Enter the game's title.
-4. Select its platform.
-5. Provide a launch ID if available.
-6. Choose a play style.
+3. Select Steam, Epic Games, or Battle.net.
+4. Enter the game's name.
+5. Select a play style.
+6. Provide a launch ID when available.
 7. Click **Add Game**.
 
-The game should appear in the library.
+The game will be added to the central library.
 
-### 4. Launch a Game
+### Importing Installed Games
 
-1. Select a game from the library.
-2. Click the **Play** button.
-3. If the game has a supported launch ID, GameCentral attempts to open its corresponding launcher.
+1. Open the Add Game interface.
+2. Select a supported platform.
+3. Choose the option to load supported local launcher files.
+4. Select the appropriate file or files from your computer.
+5. Review the detected games.
+6. Select a game and add it to GameCentral.
 
-The launcher must be installed and configured on the user's computer.
+Imported game information can then be managed through the central library.
 
+### Launching a Game
 
+1. Open the Library page.
+2. Select a game.
+3. Click **Play**.
+4. If a supported launch URL is available, GameCentral attempts to open the appropriate launcher.
 
-## Intended User Flow
+The corresponding platform launcher must be installed and configured correctly.
 
-```text
-Start GameCentral
-        |
-        v
-Open Game Library
-        |
-        v
-Add / Import Game
-        |
-        v
-View Game Collection
-        |
-        v
-Search / Filter Games
-        |
-        v
-Select Game
-        |
-        v
-Check Launch Information
-        |
-        v
-Launch Supported Game
-```
+### Discovering Games
+
+1. Open the Discover page.
+2. Use **Surprise Me** to select a random game.
+3. Apply available play-style or unplayed-game filters.
+4. View backlog and recently unplayed game suggestions.
 
