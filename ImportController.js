@@ -17,6 +17,7 @@ class ImportController {
     static setStatus(el, text, isError) {
         el.textContent = text;
         el.classList.toggle('error', !!isError);
+        el.style.color = isError ? '#ff6b6b' : ''; // red, even if style.css is an older copy
     }
 
     constructor(options) {
@@ -60,6 +61,10 @@ class ImportController {
         this.battleLookupStatus = document.getElementById('battle-lookup-status');
         this.battleLookupTimer = null;
 
+        // ---- "Already added" check ----
+        this.duplicateTimer = null;
+        this.duplicateShown = false; // is the red "already added" message showing?
+
         this.renderSteamSelect();
         this.renderEpicSelect();
         this.renderBattleSelect();
@@ -75,7 +80,13 @@ class ImportController {
             this.maybeAutoLookupEpic();
             this.maybeAutoLookupBattle();
         });
-        this.platformSelect.addEventListener('change', () => this.updateLaunchField());
+        this.platformSelect.addEventListener('change', () => {
+            this.updateLaunchField();
+            this.scheduleDuplicateCheck();
+        });
+        // After the name lookups have filled in the Launch ID, check for duplicates
+        this.nameInput.addEventListener('input', () => this.scheduleDuplicateCheck());
+        this.launchIdInput.addEventListener('input', () => this.scheduleDuplicateCheck());
 
         // Steam
         this.steamUrlInput.addEventListener('input', () => this.handleSteamUrlInput());
@@ -180,12 +191,47 @@ class ImportController {
         }
 
         const game = new Game({ title: name, platform: platformID, playStyle: this.playStyleSelect.value, launchId: launchId });
-        if (!this.library.addGames([game])) {
-            alert('"' + name + '" is already in your library.');
-            return;
-        }
+        // Already in the library on this platform? Show the red message and stay open.
+        if (this.showIfAlreadyAdded()) return;
+        this.library.addGames([game]);
         this.closeModal();
         this.onGameImported(game);
+    }
+
+    // ---- "Already added" message (all three platforms) ----
+    // The message line under Launch ID for the chosen platform
+    lookupStatusFor(platform) {
+        if (platform === 'Epic Games') return this.epicLookupStatus;
+        if (platform === 'Battle.net') return this.battleLookupStatus;
+        return this.steamLookupStatus;
+    }
+
+    // Runs just after the name lookups (which wait 200ms), so the Launch ID is filled in first
+    scheduleDuplicateCheck() {
+        clearTimeout(this.duplicateTimer);
+        this.duplicateTimer = setTimeout(() => this.showIfAlreadyAdded(), 250);
+    }
+
+    // Shows a red message if this game is already in the library on the
+    // chosen platform (using Game.sameGame). Returns true if it is.
+    showIfAlreadyAdded() {
+        const name = this.nameInput.value.trim();
+        const platform = this.platformSelect.value;
+        const status = this.lookupStatusFor(platform);
+        const game = new Game({ title: name, platform: platform, launchId: this.launchIdInput.value.trim() });
+        const existing = name ? this.library.games.find(g => g.sameGame(game)) : null;
+
+        if (existing) {
+            ImportController.setStatus(status, '"' + existing.title + '" is already added to your library on ' + platform + '.', true);
+            this.duplicateShown = true;
+            return true;
+        }
+        if (this.duplicateShown) {
+            // It was a duplicate a moment ago but isn't any more
+            if (status.textContent.indexOf('is already added') !== -1) ImportController.setStatus(status, '');
+            this.duplicateShown = false;
+        }
+        return false;
     }
 
     // Fills an installed-games drop-down from a list of Game objects
@@ -253,6 +299,7 @@ class ImportController {
         const appId = /^\d+$/.test(value) ? value : (fromLink ? fromLink[1] : null);
         if (appId) {
             this.launchIdInput.value = appId;
+            this.scheduleDuplicateCheck();
             ImportController.setStatus(this.steamAutofillStatus, 'Found App ID ' + appId + ' — filled in above.');
         } else if (value) {
             ImportController.setStatus(this.steamAutofillStatus, 'Couldn\'t find an App ID in that link — check it\'s a store.steampowered.com/app/ URL.', true);
@@ -295,6 +342,7 @@ class ImportController {
         this.nameInput.value = g.title;
         this.launchIdInput.value = g.launchId;
         ImportController.setStatus(this.steamLookupStatus, 'Launch ID ' + g.launchId + ' for "' + g.title + '" filled in.');
+        this.showIfAlreadyAdded();
     }
 
     clearSteamInstalled() {
@@ -346,6 +394,7 @@ class ImportController {
         this.nameInput.value = g.title;
         this.launchIdInput.value = g.launchId;
         ImportController.setStatus(this.epicLookupStatus, 'Launch ID for "' + g.title + '" filled in.');
+        this.showIfAlreadyAdded();
     }
 
     // Runs as you type: looks for the name in your installed Epic games
@@ -409,6 +458,7 @@ class ImportController {
         this.nameInput.value = g.title;
         this.launchIdInput.value = g.launchId;
         ImportController.setStatus(this.battleLookupStatus, 'Launch ID ' + g.launchId + ' for "' + g.title + '" filled in.');
+        this.showIfAlreadyAdded();
     }
 
     clearBattleInstalled() {
@@ -425,12 +475,24 @@ class ImportController {
         clearTimeout(this.battleLookupTimer);
         if (name.length < 2) { ImportController.setStatus(this.battleLookupStatus, ''); return; }
         this.battleLookupTimer = setTimeout(() => {
-            const installed = PlatformLibrary.findListMatch(this.platformLibrary.battleInstalled, name);
-            const known = installed || PlatformLibrary.findListMatch(PlatformLibrary.knownBattlenetGames(), name);
-            if (known) {
+            const installedList = this.platformLibrary.battleInstalled;
+            const installed = PlatformLibrary.findListMatch(installedList, name);
+            if (installed) {
+                this.launchIdInput.value = installed.id;
+                ImportController.setStatus(this.battleLookupStatus, 'Matched installed game "' + installed.name + '" — Launch ID ' + installed.id + ' filled in.');
+                return;
+            }
+            const known = PlatformLibrary.findListMatch(PlatformLibrary.knownBattlenetGames(), name);
+            if (known && installedList.length) {
+                // Your installed list is loaded and this game isn't in it
                 this.launchIdInput.value = known.id;
-                ImportController.setStatus(this.battleLookupStatus, (installed ? 'Matched installed game "' : 'Matched "') + known.name + '" — Launch ID ' + known.id + ' filled in.' +
-                    (installed ? '' : ' If it isn\'t installed, Play opens it in Battle.net so you can install it.'));
+                ImportController.setStatus(this.battleLookupStatus, 'Matched "' + known.name + '" (Launch ID ' + known.id + '), but it isn\'t in your installed Battle.net games. ' +
+                    'You can still add it — Play will open it in Battle.net so you can install it.', true);
+            } else if (known) {
+                // No installed list loaded, so we can't tell if it's installed
+                this.launchIdInput.value = known.id;
+                ImportController.setStatus(this.battleLookupStatus, 'Matched "' + known.name + '" — Launch ID ' + known.id + ' filled in. ' +
+                    'Load your installed Battle.net games above to check whether it\'s installed.');
             } else {
                 ImportController.setStatus(this.battleLookupStatus, 'Not a known Battle.net game — enter its product code by hand if you know it.', true);
             }

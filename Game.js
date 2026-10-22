@@ -29,12 +29,15 @@ class Game {
         return PlatformLibrary.isInstalled(this.platform, this.launchId) !== false;
     }
 
-    // Is this the same game as another one? Same platform, and the same
-    // Launch ID or the same name (ignoring capitals and punctuation).
+    // Is this the same game as another one on the SAME platform?
+    // (The same game on Steam and on Epic counts as two different games.)
+    // Same platform, and the same name (ignoring capitals and punctuation)
+    // or the same Launch ID (ignoring capitals, so Battle.net's "Pro" = "pro").
     sameGame(other) {
         if (!other || this.platform !== other.platform) return false;
-        if (this.launchId && this.launchId === other.launchId) return true;
         const clean = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-        return clean(this.title) !== '' && clean(this.title) === clean(other.title);
+        if (clean(this.title) !== '' && clean(this.title) === clean(other.title)) return true;
+        const id = String(this.launchId || '').trim().toLowerCase();
+        return id !== '' && id === String(other.launchId || '').trim().toLowerCase();
     }
 }
