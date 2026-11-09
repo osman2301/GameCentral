@@ -478,6 +478,16 @@ input {
     background: var(--green-bright);
 }
 
+/* Blue "⬇ Install" version, shown when a game isn't installed */
+.play-button.install-state {
+    background: var(--blue-bright);
+    color: var(--text-bright);
+}
+
+.play-button.install-state:hover {
+    background: #0d84e0;
+}
+
 /* Smaller version for the small game cards */
 .play-button-small {
     font-size: 13px;
@@ -882,10 +892,61 @@ input {
 .help summary:hover { color: var(--text-bright); }
 .help p { margin: 6px 0 0; line-height: 1.5; }
 .help code { background: var(--bg-panel); padding: 1px 4px; border-radius: 2px; word-break: break-all; }
-#steam-autofill-row { margin: -4px 0 14px; }
-#steam-autofill-row[open] { display: flex; flex-direction: column; gap: 8px; }
-#steam-autofill-row .toolbar-button { align-self: flex-start; margin-top: 4px; }
+/* Game Name and Launch ID: filled in from the game you pick, not typed */
+#add-game-form input[readonly] { background: var(--bg-darkest); color: var(--text-bright); cursor: default; }
+#add-game-form input[readonly]:focus { outline: none; }
+#add-game-form input[readonly]:placeholder-shown { color: var(--text-dim); }
 
 /* "GAME DETAILS" divider line */
 .form-divider { display: flex; align-items: center; gap: 10px; margin: 4px 0 12px; color: var(--text-dim); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
 .form-divider::before, .form-divider::after { content: ""; flex: 1; border-top: 1px solid var(--border-subtle); }
+
+/* "All Steam games" / "All Battle.net games" search boxes and their drop-down lists */
+#add-game-form .import-card .search-input { width: 100%; background: var(--bg-panel); }
+.search-results {
+    list-style: none; margin: 4px 0 0; padding: 4px 0;
+    max-height: 240px; overflow-y: auto;
+    background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+}
+.search-results li {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; cursor: pointer; font-size: 13px; color: var(--text-primary);
+}
+.search-results li.active, .search-results li:hover { background: var(--blue-deep); color: var(--text-bright); }
+.search-results .result-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-results .result-id { color: var(--text-dim); font-size: 11px; }
+.search-results .result-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; padding: 1px 5px; border-radius: 2px; }
+.search-results .tag-installed { background: var(--green-owned); color: #17260a; }
+.search-results .tag-not-installed { background: var(--blue-bright); color: var(--text-bright); }
+#add-game-form .import-card .search-under-pick { margin-top: 8px; }
+#add-game-form .import-card .search-input:disabled { opacity: 0.55; cursor: not-allowed; }
+/* ▾ arrow so the search boxes look like drop-downs */
+#add-game-form .import-card .search-input {
+    padding-right: 28px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238f98a0' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+}
+
+/* "Did <game> finish installing?" bar at the bottom of the page */
+.install-check {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 90;
+    display: flex; align-items: center; gap: 10px; max-width: calc(100vw - 32px);
+    background: var(--bg-panel); border: 1px solid var(--blue-accent); border-radius: var(--radius-md);
+    padding: 10px 12px 10px 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+    animation: installCheckIn 0.25s ease-out;
+}
+.install-check-text { color: var(--text-primary); font-size: 14px; }
+.install-check-text strong { color: var(--text-bright); }
+.install-check .ghost-button { padding: 7px 12px; }
+.install-check-close { background: none; border: none; color: var(--text-dim); font-size: 18px; line-height: 1; padding: 0 4px; }
+.install-check-close:hover { color: var(--text-bright); }
+@keyframes installCheckIn {
+    from { opacity: 0; transform: translate(-50%, 12px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+}
+.install-check-hint { display: block; color: var(--text-dim); font-size: 12px; margin-top: 2px; }
+.uninstall-button:hover { color: #ffb36b; border-color: #ffb36b; }
+.featured-actions [hidden] { display: none; }
+.install-check { max-width: min(680px, calc(100vw - 32px)); }
+.install-check button { white-space: nowrap; flex-shrink: 0; }
+.install-check-text { min-width: 0; }

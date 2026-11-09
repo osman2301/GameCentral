@@ -30,7 +30,7 @@ class Game {
     }
 
     // Is this the same game as another one on the SAME platform?
-    // (The same game on Steam and on Epic counts as two different games.)
+    // (The same game on Steam and on Epic counts as two different games.)    
     // Same platform, and the same name (ignoring capitals and punctuation)
     // or the same Launch ID (ignoring capitals, so Battle.net's "Pro" = "pro").
     sameGame(other) {

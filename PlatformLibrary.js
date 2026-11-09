@@ -18,7 +18,10 @@ var STEAM_GAMES = [[570,"Dota 2"],[730,"Counter-Strike: Global Offensive"],[2715
 class PlatformLibrary {
     // Names used to remember each installed-games list in the browser
     static STEAM_STORAGE_KEY = 'gamecentral-steam-installed';
+    static STEAM_OWNED_STORAGE_KEY = 'gamecentral-steam-owned';     // every game on your Steam account
+    static STEAM_ACCOUNT_STORAGE_KEY = 'gamecentral-steam-account'; // { apiKey, steamId, lastSync }
     static EPIC_STORAGE_KEY = 'gamecentral-epic-games';
+    static EPIC_OWNED_STORAGE_KEY = 'gamecentral-epic-owned'; // every game on your Epic account (from catcache.bin)
     static BATTLENET_STORAGE_KEY = 'gamecentral-battlenet-installed';
 
     static storageKeyFor(platform) {
@@ -28,8 +31,10 @@ class PlatformLibrary {
     }
 
     constructor() {
-        this.steamInstalled = PlatformLibrary.loadList(PlatformLibrary.STEAM_STORAGE_KEY);      // [[appId, name], ...]
-        this.epicGames = PlatformLibrary.loadList(PlatformLibrary.EPIC_STORAGE_KEY);            // [[launchId, name], ...]
+        this.steamInstalled = PlatformLibrary.loadList(PlatformLibrary.STEAM_STORAGE_KEY);      // [[appId, name], ...] installed
+        this.steamOwned = PlatformLibrary.loadList(PlatformLibrary.STEAM_OWNED_STORAGE_KEY);    // [[appId, name], ...] owned, installed or not
+        this.epicGames = PlatformLibrary.loadList(PlatformLibrary.EPIC_STORAGE_KEY);            // [[launchId, name], ...] installed
+        this.epicOwned = PlatformLibrary.loadList(PlatformLibrary.EPIC_OWNED_STORAGE_KEY);      // [[launchId, name], ...] owned, installed or not
         this.battleInstalled = PlatformLibrary.loadList(PlatformLibrary.BATTLENET_STORAGE_KEY); // [[code, name], ...]
         this.steamNameIndex = null; // fast name lookup, built on first search
         this.steamNormNames = null;
@@ -52,13 +57,63 @@ class PlatformLibrary {
         else if (platform === 'Battle.net') this.battleInstalled = [];
         else this.steamInstalled = [];
         PlatformLibrary.saveList(PlatformLibrary.storageKeyFor(platform), []);
+        PlatformLibrary.setEmptyButLoaded(platform, false); // back to "can't tell"
+    }
+
+    // An installed list that's empty because you uninstalled its last game
+    // still means "nothing installed" (not "no list loaded"). This remembers that.
+    static setEmptyButLoaded(platform, on) {
+        const key = PlatformLibrary.storageKeyFor(platform) + '-empty';
+        try { if (on) localStorage.setItem(key, '1'); else localStorage.removeItem(key); } catch (e) { /* ignore */ }
+    }
+
+    static isEmptyButLoaded(platform) {
+        try { return localStorage.getItem(PlatformLibrary.storageKeyFor(platform) + '-empty') === '1'; }
+        catch (e) { return false; }
     }
 
     // Is this Launch ID in the saved installed list for its platform?
     // true / false, or null if no list has been loaded (can't tell).
+    // Adds one game to the installed list for its platform - used when you
+    // confirm a game finished installing, so its button turns into Play
+    // without loading the platform's files again.
+    static markInstalled(platform, launchId, title) {
+        const id = String(launchId || '').trim();
+        if (!id) return false;
+        const key = PlatformLibrary.storageKeyFor(platform);
+        const list = PlatformLibrary.loadList(key);
+        if (!list.some(g => String(g[0]).toLowerCase() === id.toLowerCase())) {
+            list.push([id, title || id]);
+            list.sort((x, y) => String(x[1]).localeCompare(String(y[1])));
+            PlatformLibrary.saveList(key, list);
+        }
+        PlatformLibrary.setEmptyButLoaded(platform, false);
+        return true;
+    }
+
+    // Takes one game off the installed list for its platform - used when you
+    // confirm a game finished uninstalling, so its button turns into Install.
+    static markUninstalled(platform, launchId) {
+        const id = String(launchId || '').trim().toLowerCase();
+        if (!id) return false;
+        const key = PlatformLibrary.storageKeyFor(platform);
+        const list = PlatformLibrary.loadList(key);
+        const kept = list.filter(g => String(g[0]).toLowerCase() !== id);
+        PlatformLibrary.saveList(key, kept);
+        if (!kept.length) PlatformLibrary.setEmptyButLoaded(platform, true);
+        return true;
+    }
+
+    // Re-reads the installed lists (another page may have changed them)
+    reloadInstalled() {
+        this.steamInstalled = PlatformLibrary.loadList(PlatformLibrary.STEAM_STORAGE_KEY);
+        this.epicGames = PlatformLibrary.loadList(PlatformLibrary.EPIC_STORAGE_KEY);
+        this.battleInstalled = PlatformLibrary.loadList(PlatformLibrary.BATTLENET_STORAGE_KEY);
+    }
+
     static isInstalled(platform, launchId) {
         const list = PlatformLibrary.loadList(PlatformLibrary.storageKeyFor(platform));
-        if (!list.length) return null;
+        if (!list.length) return PlatformLibrary.isEmptyButLoaded(platform) ? false : null;
         const id = String(launchId || '').trim().toLowerCase();
         return list.some(g => String(g[0]).toLowerCase() === id);
     }
@@ -121,6 +176,29 @@ class PlatformLibrary {
             }
         }
         return best;
+    }
+
+    // Searches a [[id, name], ...] list (e.g. your Epic library) for the
+    // search drop-downs. Returns up to `limit` matches as [{ id, name }]:
+    // exact name first, then names starting with the typed text, then names
+    // whose words start with the typed words, then names containing it anywhere.
+    static searchList(list, query, limit) {
+        limit = limit || 30;
+        const q = PlatformLibrary.normalizeName(query);
+        if (q.length < 2) return [];
+        const qWords = q.split(' ');
+        const groups = [[], [], [], []];
+        list.forEach(g => {
+            const norm = PlatformLibrary.normalizeName(String(g[1]));
+            let group;
+            if (norm === q) group = 0;
+            else if (norm.startsWith(q)) group = 1;
+            else if (PlatformLibrary.wordsStartWords(qWords, norm.split(' '))) group = 2;
+            else if (norm.indexOf(q) !== -1) group = 3;
+            else return;
+            groups[group].push({ id: String(g[0]), name: g[1] });
+        });
+        return [].concat(groups[0], groups[1], groups[2], groups[3]).slice(0, limit);
     }
 
     // True if each typed word is the start of a name word, in the same order
@@ -198,6 +276,117 @@ class PlatformLibrary {
             }
         }
         return best;
+    }
+
+    // The most popular Steam games (the big list starts with the most played),
+    // shown when you click the "All Steam games" box before typing.
+    // Returns up to `limit` games as [{ id, name }], one per name.
+    popularSteamGames(limit) {
+        limit = limit || 50;
+        const seen = new Set();
+        const out = [];
+        for (let i = 0; i < STEAM_GAMES.length && out.length < limit; i++) {
+            const name = STEAM_GAMES[i][1];
+            const key = PlatformLibrary.normalizeName(name);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            out.push({ id: String(STEAM_GAMES[i][0]), name: name });
+        }
+        return out;
+    }
+
+    // ---- Searching every Steam game (the "All Steam games" drop-down) ----
+    // Returns up to `limit` matches as [{ id, name }], best first:
+    //   1. the exact name
+    //   2. names whose words start with the words you typed, most popular
+    //      first ("el" -> ELDEN RING, "sim 4" -> The Sims 4)
+    //   3. names that contain what you typed anywhere
+    searchSteamGames(query, limit) {
+        limit = limit || 30;
+        this.buildSteamIndex();
+        const q = PlatformLibrary.normalizeName(query);
+        if (q.length < 2) return [];
+        const qWords = q.split(' ');
+        const groups = [[], [], []];
+        for (let i = 0; i < STEAM_GAMES.length; i++) {
+            const norm = this.steamNormNames[i];
+            if (!norm || norm.indexOf(qWords[0]) === -1) continue; // quick skip: can't match at all
+            let group;
+            if (norm === q) group = 0;
+            else if (norm.startsWith(q) || PlatformLibrary.wordsStartWords(qWords, norm.split(' '))) group = 1;
+            else if (norm.indexOf(q) !== -1) group = 2;
+            else continue;
+            if (groups[group].length < limit) groups[group].push(i);
+            if (groups[0].length + groups[1].length >= limit) break; // enough good matches
+        }
+        return [].concat(groups[0], groups[1], groups[2])
+            .slice(0, limit)
+            .map(i => ({ id: String(STEAM_GAMES[i][0]), name: STEAM_GAMES[i][1] }));
+    }
+
+    // ---- Your whole Steam library, from the Steam Web API ----
+    // IPlayerService/GetOwnedGames lists every game on a Steam account.
+    // The desktop app (Electron) calls it directly; in a browser, Steam
+    // blocks web pages from reading the answer, so you save the page and
+    // load the file instead. Either way the answer looks like:
+    //   {"response":{"game_count":2,"games":[{"appid":1245620,"name":"ELDEN RING",...}, ...]}}
+
+    // The link that asks Steam for an account's games
+    static steamOwnedGamesUrl(apiKey, steamId) {
+        return 'https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=' + encodeURIComponent(apiKey) +
+            '&steamid=' + encodeURIComponent(steamId) + '&include_appinfo=1&include_played_free_games=1&format=json';
+    }
+
+    // Turns Steam's answer into [[appId, name], ...], sorted by name.
+    // null = not a GetOwnedGames answer; [] = Steam sent no games
+    // ({"response":{}} is what a private profile gets).
+    static steamOwnedFromApi(data) {
+        if (!data || typeof data.response !== 'object' || data.response === null) return null;
+        const games = Array.isArray(data.response.games) ? data.response.games : [];
+        const byId = new Map();
+        games.forEach(g => { if (g && g.appid) byId.set(String(g.appid), [String(g.appid), g.name || 'App ' + g.appid]); });
+        return Array.from(byId.values()).sort((a, b) => a[1].localeCompare(b[1]));
+    }
+
+    // Saves a new Steam library (replacing the old one)
+    setSteamOwned(list) {
+        this.steamOwned = list;
+        PlatformLibrary.saveList(PlatformLibrary.STEAM_OWNED_STORAGE_KEY, list);
+    }
+
+    // Browser mode: reads the page you saved from "Open my games list".
+    // Resolves to the list, or null if it isn't a Steam games list.
+    readSteamOwnedFile(file) {
+        return file.text().then(text => {
+            let data;
+            try { data = JSON.parse(text.replace(/^\uFEFF/, '')); } catch (e) { return null; }
+            const list = PlatformLibrary.steamOwnedFromApi(data);
+            if (list && list.length) this.setSteamOwned(list);
+            return list;
+        });
+    }
+
+    clearSteamOwned() {
+        this.setSteamOwned([]);
+    }
+
+    // Your Steam library as Game objects (for the drop-down)
+    requestOwnedSteamGames() {
+        return this.steamOwned.map(g => new Game({ title: g[1], platform: 'Steam', launchId: g[0] }));
+    }
+
+    // Your API key and SteamID, saved on this computer only
+    static loadSteamAccount() {
+        try {
+            const a = JSON.parse(localStorage.getItem(PlatformLibrary.STEAM_ACCOUNT_STORAGE_KEY) || 'null');
+            return a && typeof a === 'object' ? a : { apiKey: '', steamId: '', lastSync: 0 };
+        } catch (e) {
+            return { apiKey: '', steamId: '', lastSync: 0 };
+        }
+    }
+
+    static saveSteamAccount(account) {
+        try { localStorage.setItem(PlatformLibrary.STEAM_ACCOUNT_STORAGE_KEY, JSON.stringify(account)); } catch (e) { /* still works this visit */ }
     }
 
     // ---- Installed Steam games ----
@@ -293,6 +482,75 @@ class PlatformLibrary {
             }
             return { list: list, skipped: skipped };
         });
+    }
+
+    // ---- Your whole Epic library (installed or not) ----
+    // The Epic launcher keeps a cache of your account's games in
+    // C:\ProgramData\Epic\EpicGamesLauncher\Data\Catalog\catcache.bin.
+    // It's JSON written in base64. Each item has the IDs needed for a
+    // Launch ID: namespace, id (catalogItemId) and releaseInfo[].appId (appName).
+    // It isn't an official list, so it can be slightly out of date - open the
+    // Epic launcher before loading it.
+
+    // Turns the text of catcache.bin into a list of [launchId, name].
+    // Keeps only full Windows games: skips add-ons, DLC (anything that
+    // belongs to a main game), soundtracks, art books, engines and tools.
+    static epicOwnedFromCatcache(text) {
+        let items;
+        try {
+            const binary = atob(text.trim());
+            const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+            items = JSON.parse(new TextDecoder('utf-8').decode(bytes));
+        } catch (e) {
+            return null; // not a catcache.bin
+        }
+        if (!Array.isArray(items)) return null;
+
+        const byId = new Map();
+        items.forEach(it => {
+            if (!it || !it.namespace || !it.id) return;
+            const cats = (it.categories || []).map(c => c && c.path);
+            if (cats.indexOf('games') === -1 || cats.indexOf('addons') !== -1) return;
+            if (it.mainGameItem && it.mainGameItem.id) return; // DLC / extras of another game
+            const release = (it.releaseInfo || []).find(r => r && r.appId && (r.platform || []).indexOf('Windows') !== -1);
+            if (!release) return;
+            const launchId = it.namespace + ':' + it.id + ':' + release.appId;
+            byId.set(launchId, [launchId, PlatformLibrary.cleanEpicTitle(it.title || release.appId)]);
+        });
+        return Array.from(byId.values()).sort((a, b) => a[1].localeCompare(b[1]));
+    }
+
+    // The cache stores ™ and ® as "?", e.g. "Rocket League?" or
+    // "Dragon Age: Inquisition ? Game of the Year Edition". Tidy those up.
+    static cleanEpicTitle(title) {
+        return String(title)
+            .replace(/ \? /g, ' – ')          // "Inquisition ? Game" -> "Inquisition – Game"
+            .replace(/([A-Za-z0-9])\?(?=\s|:|$)/g, '$1') // "League?" -> "League", "Sims? 4" -> "Sims 4"
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+    }
+
+    // Reads catcache.bin and, if games are found, replaces the saved library.
+    // Resolves to the list (empty if none), or null if it isn't a catcache.bin.
+    readEpicCatcache(file) {
+        return file.text().then(text => {
+            const list = PlatformLibrary.epicOwnedFromCatcache(text);
+            if (list && list.length) {
+                this.epicOwned = list;
+                PlatformLibrary.saveList(PlatformLibrary.EPIC_OWNED_STORAGE_KEY, list);
+            }
+            return list;
+        });
+    }
+
+    clearEpicOwned() {
+        this.epicOwned = [];
+        PlatformLibrary.saveList(PlatformLibrary.EPIC_OWNED_STORAGE_KEY, []);
+    }
+
+    // Your Epic library as Game objects (for the drop-down)
+    requestOwnedEpicGames() {
+        return this.epicOwned.map(g => new Game({ title: g[1], platform: 'Epic Games', launchId: g[0] }));
     }
 
     // ================================================================
