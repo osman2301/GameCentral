@@ -46,6 +46,7 @@
     <script src="OriginalPlatform.js"></script>
     <script src="LaunchController.js"></script>
     <script src="ImportController.js"></script>
+    <script src="GameInfo.js"></script>
     <script>
         // ================================================================
         // App state
@@ -92,17 +93,6 @@
             return (words[0][0] + words[1][0]).toUpperCase();
         }
 
-        // Play styles. Older saves may also have a "modes" list or "Auto-detect".
-        function modesFor(g) {
-            if (g.modes && g.modes.length) return g.modes;
-            return (g.playStyle && g.playStyle !== 'Auto-detect') ? [g.playStyle] : [];
-        }
-        function hasPlayStyle(g, style) {
-            return g.playStyle === style || (g.modes || []).indexOf(style) >= 0;
-        }
-        function modesLabel(g) { return modesFor(g).join(', '); }
-        function styleLabel(g) { return modesLabel(g) || 'Unknown'; }
-
         function emptyMessage(text) {
             var p = document.createElement('p');
             p.className = 'empty-state';
@@ -121,7 +111,10 @@
         }
 
         function note_played(g) { return 'Played ' + formatLastPlayed(g.lastPlayedAt) + ' · ' + formatPlayTime(g.totalMinutes); }
-        function note_platform(g) { return g.platform + (modesLabel(g) ? ' · ' + modesLabel(g) : ''); }
+        // Genres from Wikidata (e.g. "Roguelike, Action role-playing"), '' until the game has been looked up
+        function genreLabel(g, max) { return gameInfo ? gameInfo.genreLabel(g, max) : ''; }
+        // "Steam · Roguelike, Action role-playing" (just "Steam" until the genre is known)
+        function note_platform(g) { var genre = genreLabel(g); return g.platform + (genre ? ' · ' + genre : ''); }
 
         // Opens a game on the Library page (library.html?game=3)
         function openGame(index) {
@@ -301,7 +294,7 @@
 
                     <div class="form-divider"><span>Game details</span></div>
 
-                    <!-- 3. Name, Launch ID and play style -->
+                    <!-- 3. Name and Launch ID -->
                     <div class="filter-field">
                         <label for="new-game-name">Game Name</label>
                         <input type="text" id="new-game-name" placeholder="Pick a game above" readonly tabindex="-1">
@@ -315,16 +308,6 @@
                         <p class="field-hint" id="launch-id-hint"></p>
                     </div>
 
-
-                    <div class="filter-field">
-                        <label for="new-game-play-style">Play Style</label>
-                        <select id="new-game-play-style">
-                            <option value="">Not set</option>
-                            <option>Single Player</option>
-                            <option>Multiplayer</option>
-                            <option>Co-op</option>
-                        </select>
-                    </div>
 
                     <div class="modal-actions">
                         <button type="button" class="toolbar-button" id="cancel-add-game">Cancel</button>
@@ -357,6 +340,17 @@
         });
 
         // ================================================================
+        // Genres (and the game modes Discover's filters use) from Wikidata - see GameInfo.js.
+        // Looks up games that haven't been looked up yet, then redraws.
+        // ================================================================
+        var gameInfo = new GameInfo({ library: library, statusEl: document.getElementById('mood-status') }); // status line only on Discover
+        function lookUpGames() {
+            var lookup = gameInfo.lookUpMissingGames();
+            if (gameInfo.running) renderPage(); // shows "Looking up…" until it's done
+            lookup.then(function (result) { if (result) renderPage(); });
+        }
+
+        // ================================================================
         // Home: big banner for the last played game, then "Earlier" games
         // ================================================================
         var popNext = true; // play the banner animation once when the page opens
@@ -381,7 +375,7 @@
             hero.className = 'featured-game home-hero';
             if (popNext) { hero.classList.add('hero-pop'); popNext = false; }
 
-            // Banner picture area with platform, name and play style
+            // Banner picture area with platform, name and genres
             var art = document.createElement('div');
             art.className = 'featured-art';
             var content = document.createElement('div');
@@ -392,7 +386,7 @@
             var title = document.createElement('h2');
             title.textContent = g.title;
             var sub = document.createElement('p');
-            sub.textContent = styleLabel(g);
+            sub.textContent = genreLabel(g, 3); // genres from Wikidata (blank until they're looked up)
             content.appendChild(cat);
             content.appendChild(title);
             content.appendChild(sub);
@@ -434,7 +428,9 @@
         }
 
         renderPage = renderHome;
+        onGameAdded = function () { renderPage(); lookUpGames(); };
         renderPage();
+        lookUpGames();
     </script>
 </body>
 </html>

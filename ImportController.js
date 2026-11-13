@@ -173,7 +173,6 @@ class ImportController {
         this.form = document.getElementById('add-game-form');
         this.nameInput = document.getElementById('new-game-name');
         this.platformSelect = document.getElementById('new-game-platform');
-        this.playStyleSelect = document.getElementById('new-game-play-style');
         this.launchIdInput = document.getElementById('new-game-launch-id');
         this.launchIdHint = document.getElementById('launch-id-hint');
 
@@ -373,7 +372,7 @@ class ImportController {
             return;
         }
 
-        const game = new Game({ title: name, platform: platformID, playStyle: this.playStyleSelect.value, launchId: launchId });
+        const game = new Game({ title: name, platform: platformID, launchId: launchId });
         // Already in the library on this platform? Show the red message and stay open.
         if (this.showIfAlreadyAdded()) return;
         this.library.addGames([game]);

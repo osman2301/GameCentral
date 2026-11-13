@@ -950,3 +950,7 @@ input {
 .install-check { max-width: min(680px, calc(100vw - 32px)); }
 .install-check button { white-space: nowrap; flex-shrink: 0; }
 .install-check-text { min-width: 0; }
+/* Discover: hide the "Looking up games…" line when it's empty */
+#mood-status:empty { display: none; }
+/* "Filter" results under the panel */
+#pick-result > .disc-note { margin-top: 16px; }

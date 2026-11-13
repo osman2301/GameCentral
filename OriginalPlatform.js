@@ -50,9 +50,12 @@ class OriginalPlatform {
 
     // Builds the link that takes you to the platform's uninstall step.
     //   Steam:      opens Steam's "Uninstall <game>?" window
-    //   Epic:       opens your Epic library - click ... on the game, then Uninstall
+    //   Epic:       opens your Epic library - click ⋯ on the game, then Uninstall
+    //               (the launcher only accepts action=launch and action=install,
+    //               so there's no link that uninstalls one game)
     //   Battle.net: opens the game's page - click the gear next to Play, then Uninstall
-    // (Epic and Battle.net have no direct uninstall link.)
+    // (Epic and Battle.net have no direct uninstall link, so GameCentral
+    // shows its own "Uninstall?" window first - see LaunchController.)
     static buildUninstallUrl(platform, launchId) {
         if (!launchId) return null;
         const id = launchId.trim();
@@ -62,9 +65,14 @@ class OriginalPlatform {
         return null;
     }
 
+    // Does the platform's app show its own "Uninstall?" window?
+    static hasUninstallWindow(platform) {
+        return platform === 'Steam';
+    }
+
     // What to tell you to do in the platform's app after opening it
     static uninstallHint(platform) {
-        if (platform === 'Epic Games') return 'In the Epic Games Launcher, click ⋯ on the game, then Uninstall.';
+        if (platform === 'Epic Games') return 'In your Epic library, click ⋯ on the game, then Uninstall.';
         if (platform === 'Battle.net') return 'In Battle.net, click the gear next to Play, then Uninstall.';
         return 'Confirm in Steam\'s Uninstall window.';
     }

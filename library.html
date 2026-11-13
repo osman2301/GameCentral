@@ -82,8 +82,8 @@
                             <strong id="featured-play-time">0 hours</strong>
                         </div>
                         <div class="featured-details">
-                            <p>PLAY STYLE</p>
-                            <strong id="featured-playstyle" style="font-size:14px; max-width:320px; display:block;">Unknown</strong>
+                            <p>GENRE</p>
+                            <strong id="featured-genre" style="font-size:14px; max-width:320px; display:block;">Unknown</strong>
                         </div>
                         <div class="featured-actions">
                             <button type="button" class="ghost-button remove-button" id="remove-game-button" title="Remove from GameCentral (keeps it on your PC)">Remove</button>
@@ -124,6 +124,7 @@
     <script src="OriginalPlatform.js"></script>
     <script src="LaunchController.js"></script>
     <script src="ImportController.js"></script>
+    <script src="GameInfo.js"></script>
     <script>
         // ================================================================
         // App state
@@ -170,17 +171,6 @@
             return (words[0][0] + words[1][0]).toUpperCase();
         }
 
-        // Play styles. Older saves may also have a "modes" list or "Auto-detect".
-        function modesFor(g) {
-            if (g.modes && g.modes.length) return g.modes;
-            return (g.playStyle && g.playStyle !== 'Auto-detect') ? [g.playStyle] : [];
-        }
-        function hasPlayStyle(g, style) {
-            return g.playStyle === style || (g.modes || []).indexOf(style) >= 0;
-        }
-        function modesLabel(g) { return modesFor(g).join(', '); }
-        function styleLabel(g) { return modesLabel(g) || 'Unknown'; }
-
         function emptyMessage(text) {
             var p = document.createElement('p');
             p.className = 'empty-state';
@@ -199,7 +189,10 @@
         }
 
         function note_played(g) { return 'Played ' + formatLastPlayed(g.lastPlayedAt) + ' · ' + formatPlayTime(g.totalMinutes); }
-        function note_platform(g) { return g.platform + (modesLabel(g) ? ' · ' + modesLabel(g) : ''); }
+        // Genres from Wikidata (e.g. "Roguelike, Action role-playing"), '' until the game has been looked up
+        function genreLabel(g, max) { return gameInfo ? gameInfo.genreLabel(g, max) : ''; }
+        // "Steam · Roguelike, Action role-playing" (just "Steam" until the genre is known)
+        function note_platform(g) { var genre = genreLabel(g); return g.platform + (genre ? ' · ' + genre : ''); }
 
         // Opens a game on the Library page (library.html?game=3)
         function openGame(index) {
@@ -379,7 +372,7 @@
 
                     <div class="form-divider"><span>Game details</span></div>
 
-                    <!-- 3. Name, Launch ID and play style -->
+                    <!-- 3. Name and Launch ID -->
                     <div class="filter-field">
                         <label for="new-game-name">Game Name</label>
                         <input type="text" id="new-game-name" placeholder="Pick a game above" readonly tabindex="-1">
@@ -393,16 +386,6 @@
                         <p class="field-hint" id="launch-id-hint"></p>
                     </div>
 
-
-                    <div class="filter-field">
-                        <label for="new-game-play-style">Play Style</label>
-                        <select id="new-game-play-style">
-                            <option value="">Not set</option>
-                            <option>Single Player</option>
-                            <option>Multiplayer</option>
-                            <option>Co-op</option>
-                        </select>
-                    </div>
 
                     <div class="modal-actions">
                         <button type="button" class="toolbar-button" id="cancel-add-game">Cancel</button>
@@ -433,6 +416,17 @@
             getSelectedGame: function () { return games[selectedIndex] || null; },
             onSessionEnded: function () { renderPage(); }
         });
+
+        // ================================================================
+        // Genres (and the game modes Discover's filters use) from Wikidata - see GameInfo.js.
+        // Looks up games that haven't been looked up yet, then redraws.
+        // ================================================================
+        var gameInfo = new GameInfo({ library: library, statusEl: document.getElementById('mood-status') }); // status line only on Discover
+        function lookUpGames() {
+            var lookup = gameInfo.lookUpMissingGames();
+            if (gameInfo.running) renderPage(); // shows "Looking up…" until it's done
+            lookup.then(function (result) { if (result) renderPage(); });
+        }
 
         // ================================================================
         // Library page state
@@ -538,7 +532,7 @@
             featuredDescription.textContent = 'Jump into ' + game.title + '.';
             featuredLastPlayed.textContent = formatLastPlayed(game.lastPlayedAt);
             featuredPlayTime.textContent = formatPlayTime(game.totalMinutes);
-            document.getElementById('featured-playstyle').textContent = styleLabel(game);
+            document.getElementById('featured-genre').textContent = gameInfo.genreStatus(game, 3); // genres, or why they're missing
             LaunchController.styleActionButton(document.getElementById('featured-play-button'), game); // ▶ Play or ⬇ Install
             // Uninstall only shows for games in your installed list
             document.getElementById('uninstall-game-button').hidden = !LaunchController.canUninstall(game);
@@ -559,7 +553,7 @@
                     '<div class="library-game-details"><h3></h3><p></p></div>';
                 card.querySelector('.cover-title').textContent = game.title;
                 card.querySelector('h3').textContent = game.title;
-                card.querySelector('p').textContent = game.platform;
+                card.querySelector('p').textContent = note_platform(game);
                 gameShelf.appendChild(card);
             });
         }
@@ -579,7 +573,7 @@
                     '<div><h3></h3><p></p></div>';
                 card.querySelector('.small-cover').textContent = initials(game.title);
                 card.querySelector('h3').textContent = game.title;
-                card.querySelector('p').textContent = game.platform + (modesLabel(game) ? ' · ' + modesLabel(game) : '');
+                card.querySelector('p').textContent = note_platform(game);
                 allGamesGrid.appendChild(card);
             });
         }
@@ -658,9 +652,11 @@
             selectedIndex = index;
             clearSearch();
             renderPage();
+            lookUpGames();
         };
 
         renderPage();
+        lookUpGames();
     </script>
 </body>
 </html>

@@ -27,7 +27,7 @@
     </header>
 
     <div class="app-layout">
-        <!-- ===== DISCOVER PAGE: random pick, backlog, store links ===== -->
+        <!-- ===== DISCOVER PAGE: random pick, backlog ===== -->
         <main class="library-main">
             <section class="library-toolbar">
                 <div>
@@ -41,41 +41,30 @@
                 <p class="disc-note">Can't decide? Let the library choose.</p>
                 <div class="filter-panel">
                     <div class="filter-field">
-                        <label for="pick-style">Play Style</label>
-                        <select id="pick-style">
-                            <option>Any Style</option>
-                            <option>Single Player</option>
-                            <option>Multiplayer</option>
-                            <option>Co-op</option>
+                        <label for="pick-mood">I'm feeling…</label>
+                        <select id="pick-mood">
+                            <option>Any Mood</option> <!-- the moods are added by GameFilter, from GameFilter.MOODS -->
                         </select>
                     </div>
                     <div class="filter-field">
-                        <label for="pick-unplayed">Only games I haven't played</label>
-                        <input type="checkbox" id="pick-unplayed">
+                        <label for="pick-time">How much time do I have?</label>
+                        <select id="pick-time">
+                            <option>Any Time</option> <!-- the choices are added by GameFilter, from GameFilter.TIME_OPTIONS -->
+                        </select>
                     </div>
+                    <button class="toolbar-button" id="filter-button">Filter</button>
                     <button class="match-button" id="pick-button">Surprise me</button>
                 </div>
+                <p class="disc-note" id="mood-status"></p> <!-- "Looking up games…" etc. -->
                 <div id="pick-result"></div>
             </section>
 
-            <div id="discover-content"></div> <!-- "Still in your backlog" / "Worth revisiting", filled in by the script -->
+            <div id="discover-content"></div> <!-- "Worth revisiting", filled in by the script -->
 
-            <section class="disc-section">
-                <h2>Find new games</h2>
-                <p class="disc-note">Browse what's new and popular on each store. These open in a new tab.</p>
-                <div class="store-links">
-                    <a href="https://store.steampowered.com/explore/new/" target="_blank" rel="noopener">Steam: New &amp; Trending ↗</a>
-                    <a href="https://store.steampowered.com/charts/topsellers/" target="_blank" rel="noopener">Steam: Top Sellers ↗</a>
-                    <a href="https://store.steampowered.com/specials" target="_blank" rel="noopener">Steam: Specials ↗</a>
-                    <a href="https://store.epicgames.com/en-US/free-games" target="_blank" rel="noopener">Epic: Free Games ↗</a>
-                    <a href="https://store.epicgames.com/en-US/browse" target="_blank" rel="noopener">Epic: Browse ↗</a>
-                    <a href="https://shop.battle.net/" target="_blank" rel="noopener">Battle.net: Shop ↗</a>
-                </div>
-                <div class="store-search">
-                    <input type="text" id="store-search-input" placeholder="Search Steam for a game" aria-label="Search Steam">
-                    <button class="toolbar-button" id="store-search-button">Search ↗</button>
-                </div>
-            </section>
+            <footer class="library-footer">
+                <span>GameCentral</span>
+                <span>Game info from <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a></span>
+            </footer>
         </main>
     </div>
 
@@ -86,6 +75,8 @@
     <script src="OriginalPlatform.js"></script>
     <script src="LaunchController.js"></script>
     <script src="ImportController.js"></script>
+    <script src="GameInfo.js"></script>
+    <script src="GameFilter.js"></script>
     <script>
         // ================================================================
         // App state
@@ -132,17 +123,6 @@
             return (words[0][0] + words[1][0]).toUpperCase();
         }
 
-        // Play styles. Older saves may also have a "modes" list or "Auto-detect".
-        function modesFor(g) {
-            if (g.modes && g.modes.length) return g.modes;
-            return (g.playStyle && g.playStyle !== 'Auto-detect') ? [g.playStyle] : [];
-        }
-        function hasPlayStyle(g, style) {
-            return g.playStyle === style || (g.modes || []).indexOf(style) >= 0;
-        }
-        function modesLabel(g) { return modesFor(g).join(', '); }
-        function styleLabel(g) { return modesLabel(g) || 'Unknown'; }
-
         function emptyMessage(text) {
             var p = document.createElement('p');
             p.className = 'empty-state';
@@ -161,7 +141,10 @@
         }
 
         function note_played(g) { return 'Played ' + formatLastPlayed(g.lastPlayedAt) + ' · ' + formatPlayTime(g.totalMinutes); }
-        function note_platform(g) { return g.platform + (modesLabel(g) ? ' · ' + modesLabel(g) : ''); }
+        // Genres from Wikidata (e.g. "Roguelike, Action role-playing"), '' until the game has been looked up
+        function genreLabel(g, max) { return gameInfo ? gameInfo.genreLabel(g, max) : ''; }
+        // "Steam · Roguelike, Action role-playing" (just "Steam" until the genre is known)
+        function note_platform(g) { var genre = genreLabel(g); return g.platform + (genre ? ' · ' + genre : ''); }
 
         // Opens a game on the Library page (library.html?game=3)
         function openGame(index) {
@@ -341,7 +324,7 @@
 
                     <div class="form-divider"><span>Game details</span></div>
 
-                    <!-- 3. Name, Launch ID and play style -->
+                    <!-- 3. Name and Launch ID -->
                     <div class="filter-field">
                         <label for="new-game-name">Game Name</label>
                         <input type="text" id="new-game-name" placeholder="Pick a game above" readonly tabindex="-1">
@@ -355,16 +338,6 @@
                         <p class="field-hint" id="launch-id-hint"></p>
                     </div>
 
-
-                    <div class="filter-field">
-                        <label for="new-game-play-style">Play Style</label>
-                        <select id="new-game-play-style">
-                            <option value="">Not set</option>
-                            <option>Single Player</option>
-                            <option>Multiplayer</option>
-                            <option>Co-op</option>
-                        </select>
-                    </div>
 
                     <div class="modal-actions">
                         <button type="button" class="toolbar-button" id="cancel-add-game">Cancel</button>
@@ -397,47 +370,78 @@
         });
 
         // ================================================================
-        // Discover: never-played games, and games not played for a month
+        // Genres (and the game modes Discover's filters use) from Wikidata - see GameInfo.js.
+        // Looks up games that haven't been looked up yet, then redraws.
+        // ================================================================
+        var gameInfo = new GameInfo({ library: library, statusEl: document.getElementById('mood-status') }); // status line only on Discover
+        function lookUpGames() {
+            var lookup = gameInfo.lookUpMissingGames();
+            if (gameInfo.running) renderPage(); // shows "Looking up…" until it's done
+            lookup.then(function (result) { if (result) renderPage(); });
+        }
+
+        // ================================================================
+        // Discover: games not played for a month
         // ================================================================
         function renderDiscover() {
             var el = document.getElementById('discover-content');
             el.innerHTML = '';
             var month = 30 * 86400000;
             [
-                gameSection('Still in your backlog', pickIndexes(isUnplayed, null, 8), note_platform, 'disc-section'),
                 gameSection('Worth revisiting', pickIndexes(function (g) { return g.lastPlayedAt && Date.now() - g.lastPlayedAt > month; }, function (a, b) { return games[b].totalMinutes - games[a].totalMinutes; }, 4), note_played, 'disc-section')
             ].forEach(function (sec) { if (sec) el.appendChild(sec); });
         }
 
-        // "Surprise me": a random game matching the chosen filters
-        document.getElementById('pick-button').addEventListener('click', function () {
-            var style = document.getElementById('pick-style').value;
-            var onlyNew = document.getElementById('pick-unplayed').checked;
-            var out = document.getElementById('pick-result');
-            out.innerHTML = '';
-            var idx = pickIndexes(function (g) {
-                return (style === 'Any Style' || hasPlayStyle(g, style)) && (!onlyNew || isUnplayed(g));
-            });
-            if (!idx.length) {
-                var p = document.createElement('p');
-                p.className = 'disc-note';
-                p.textContent = games.length ? 'No games match those filters.' : 'Add a game first.';
-                out.appendChild(p);
-                return;
-            }
-            var i = idx[Math.floor(Math.random() * idx.length)];
-            var card = miniCard(i, note_platform(games[i]));
-            card.classList.add('pick-card');
-            out.appendChild(card);
+        // ================================================================
+        // "Pick something for me" (see GameFilter.js): mood and time
+        // ================================================================
+        var filter = new GameFilter({
+            info: gameInfo,
+            moodSelect: document.getElementById('pick-mood'),
+            timeSelect: document.getElementById('pick-time')
         });
 
-        // Steam search box (button or Enter)
-        document.getElementById('store-search-button').addEventListener('click', function () {
-            var term = encodeURIComponent(document.getElementById('store-search-input').value.trim());
-            window.open('https://store.steampowered.com/search/?term=' + term, '_blank', 'noopener');
+        // Look up new games on Wikidata as soon as Discover opens, and after "+ Add Game"
+        lookUpGames();
+        onGameAdded = function () { renderPage(); lookUpGames(); };
+
+        // Shows a message (e.g. "None of your games feel spooked.") where the results go
+        function showPickMessage(out, text) {
+            var p = document.createElement('p');
+            p.className = 'disc-note';
+            p.textContent = text;
+            out.appendChild(p);
+        }
+
+        // "Filter": show every game that matches the filters
+        document.getElementById('filter-button').addEventListener('click', function () {
+            var out = document.getElementById('pick-result');
+            out.innerHTML = '';
+            filter.filterAll().then(function (result) {
+                out.innerHTML = '';
+                if (result.message) { showPickMessage(out, result.message); return; }
+                showPickMessage(out, result.matches.length + ' of ' + result.total + ' game' + (result.total === 1 ? '' : 's') + ' match.');
+                var grid = document.createElement('div');
+                grid.className = 'mini-grid';
+                result.matches.forEach(function (m) {
+                    grid.appendChild(miniCard(m.index, note_platform(games[m.index]) + (m.why ? ' · ' + m.why : '')));
+                });
+                out.appendChild(grid);
+            });
         });
-        document.getElementById('store-search-input').addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') document.getElementById('store-search-button').click();
+
+        // "Surprise me": show a random game that matches the filters
+        document.getElementById('pick-button').addEventListener('click', function () {
+            var out = document.getElementById('pick-result');
+            out.innerHTML = '';
+            filter.pickRandom().then(function (pick) {
+                out.innerHTML = '';
+                if (pick.message) { showPickMessage(out, pick.message); return; }
+                // Shows why it fits, e.g. "Steam · Action · horror · ~30 min sessions"
+                var card = miniCard(pick.index, note_platform(games[pick.index]) + (pick.why ? ' · ' + pick.why : ''));
+                card.classList.add('pick-card');
+                out.appendChild(card);
+            });
         });
 
         renderPage = renderDiscover;
