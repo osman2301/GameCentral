@@ -51,12 +51,13 @@ class GameFilter {
     static LONG_KEYWORDS = ['role-playing', 'open world', 'massively multiplayer', 'grand strategy', '4x'];
     static HOUR_KEYWORDS = ['shooter', 'action', 'strategy', 'horror', 'survival', 'simulation', 'multiplayer', 'cooperative', 'adventure'];
 
+    // options.library      - CentralLibrary (the games being filtered)
     // options.info         - GameInfo (genres and game modes)
     // options.moodSelect   - the "I'm feeling…" <select> (moods are added to it here)
     // options.timeSelect   - the "How much time do I have?" <select> (choices added here)
     constructor(options) {
+        this.library = options.library;
         this.info = options.info;
-        this.library = options.info.library;
         this.moodSelect = options.moodSelect;
         this.timeSelect = options.timeSelect;
 

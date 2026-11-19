@@ -55,7 +55,7 @@ class OriginalPlatform {
     //               so there's no link that uninstalls one game)
     //   Battle.net: opens the game's page - click the gear next to Play, then Uninstall
     // (Epic and Battle.net have no direct uninstall link, so GameCentral
-    // shows its own "Uninstall?" window first - see LaunchController.)
+    // shows what to click - see uninstallHint and LaunchController.)
     static buildUninstallUrl(platform, launchId) {
         if (!launchId) return null;
         const id = launchId.trim();
@@ -63,11 +63,6 @@ class OriginalPlatform {
         if (platform === 'Battle.net') return 'battlenet://' + id;
         if (platform === 'Epic Games') return 'com.epicgames.launcher://library';
         return null;
-    }
-
-    // Does the platform's app show its own "Uninstall?" window?
-    static hasUninstallWindow(platform) {
-        return platform === 'Steam';
     }
 
     // What to tell you to do in the platform's app after opening it

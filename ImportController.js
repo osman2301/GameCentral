@@ -4,149 +4,9 @@
 // filling in the game's name and Launch ID from the game you pick in a
 // list (using PlatformLibrary), and adding the finished game to the
 // CentralLibrary. The name and Launch ID can't be typed in by hand.
+// Also runs the three search drop-downs ("All Steam games", "Your Epic
+// library", "All Battle.net games") - see "Search drop-downs" below.
 // ================================================================
-class GameSearchBox {
-    // A search box with a drop-down of matching games, used for
-    // "All Steam games", "Your Epic library" and "All Battle.net games".
-    // Type to search, then click a game or use the arrow keys and Enter.
-    //   options.input / results / status - the <input>, <ul> and message line
-    //   options.search(query)   -> [{ id, name }] matches
-    //   options.browse()        -> [{ id, name }] shown when you click the box
-    //                              before typing (so it works like a drop-down)
-    //   options.isInstalled(id) -> true / false / null (null = can't tell, no tag)
-    //   options.onPick(game)    -> fills in the form
-    //   options.showIds         -> show each game's ID (handy for Steam editions)
-    //   options.noMatch(query)  -> message when nothing matches
-    constructor(options) {
-        this.o = options;
-        this.input = options.input;
-        this.results = options.results;
-        this.status = options.status;
-        this.matches = []; // [{ id, name }] in the drop-down
-        this.active = -1;  // highlighted row (arrow keys)
-        this.timer = null;
-
-        this.input.addEventListener('input', () => {
-            clearTimeout(this.timer);
-            this.timer = setTimeout(() => this.run(), 120);
-        });
-        // Clicking the box opens the list, even before you type
-        this.input.addEventListener('focus', () => this.open());
-        this.input.addEventListener('click', () => this.open());
-        this.input.addEventListener('blur', () => setTimeout(() => this.show(false), 150));
-        this.input.addEventListener('keydown', (event) => this.onKey(event));
-        // mousedown (not click) so it runs before the box loses focus
-        this.results.addEventListener('mousedown', (event) => {
-            const li = event.target.closest('li[data-index]');
-            if (!li) return;
-            event.preventDefault();
-            this.pick(Number(li.dataset.index));
-        });
-    }
-
-    // Opens the list if it's closed (fills it first if needed)
-    open() {
-        if (this.input.disabled || !this.results.hidden) return;
-        if (!this.matches.length) this.run();
-        else this.show(true);
-    }
-
-    run() {
-        const query = this.input.value.trim();
-        if (query.length >= 2) this.matches = this.o.search(query);
-        else this.matches = this.o.browse ? this.o.browse() : []; // empty box: the starting list
-        this.active = this.matches.length ? 0 : -1;
-        this.render();
-        if (query.length >= 2 && !this.matches.length) ImportController.setStatus(this.status, this.o.noMatch(query), true);
-        else ImportController.setStatus(this.status, '');
-    }
-
-    render() {
-        this.results.innerHTML = '';
-        this.matches.forEach((g, i) => {
-            const li = document.createElement('li');
-            li.dataset.index = String(i);
-            li.id = this.results.id + '-option-' + i;
-            li.setAttribute('role', 'option');
-            li.className = i === this.active ? 'active' : '';
-            li.setAttribute('aria-selected', i === this.active ? 'true' : 'false');
-            const name = document.createElement('span');
-            name.className = 'result-name';
-            name.textContent = g.name;
-            li.appendChild(name);
-            // INSTALLED / INSTALL tag, when your installed list is loaded
-            const installed = this.o.isInstalled(g.id);
-            if (installed !== null) {
-                const tag = document.createElement('span');
-                tag.className = 'result-tag ' + (installed ? 'tag-installed' : 'tag-not-installed');
-                tag.textContent = installed ? 'INSTALLED' : 'INSTALL';
-                li.appendChild(tag);
-            }
-            if (this.o.showIds) {
-                const id = document.createElement('span');
-                id.className = 'result-id';
-                id.textContent = g.id;
-                li.appendChild(id);
-            }
-            this.results.appendChild(li);
-        });
-        this.show(this.matches.length > 0);
-    }
-
-    show(visible) {
-        this.results.hidden = !visible;
-        this.input.setAttribute('aria-expanded', visible ? 'true' : 'false');
-        if (visible && this.active >= 0) this.input.setAttribute('aria-activedescendant', this.results.id + '-option-' + this.active);
-        else this.input.removeAttribute('aria-activedescendant');
-    }
-
-    // Arrow keys move, Enter picks, Escape closes the list (not the window)
-    onKey(event) {
-        const open = !this.results.hidden && this.matches.length > 0;
-        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-            event.preventDefault();
-            if (!open) { this.open(); return; } // first press opens the list
-            if (!this.matches.length) return;
-            const n = this.matches.length;
-            this.active = (this.active + (event.key === 'ArrowDown' ? 1 : -1) + n) % n;
-            this.render();
-            const li = this.results.children[this.active];
-            if (li) li.scrollIntoView({ block: 'nearest' });
-        } else if (event.key === 'Enter') {
-            event.preventDefault(); // don't submit the form
-            if (open && this.active >= 0) this.pick(this.active);
-        } else if (event.key === 'Escape' && open) {
-            event.preventDefault();
-            event.stopPropagation(); // keep the Add Game window open
-            this.show(false);
-        }
-    }
-
-    pick(i) {
-        const g = this.matches[i];
-        if (!g) return;
-        this.o.onPick(g);
-        this.reset();
-    }
-
-    reset() {
-        clearTimeout(this.timer);
-        this.input.value = '';
-        this.matches = [];
-        this.active = -1;
-        this.results.innerHTML = '';
-        this.show(false);
-        ImportController.setStatus(this.status, '');
-    }
-
-    // Greys the box out (e.g. before your Epic library is loaded)
-    setEnabled(enabled, placeholder) {
-        this.input.disabled = !enabled;
-        this.input.placeholder = placeholder;
-        if (!enabled) this.reset();
-    }
-}
-
 class ImportController {
     // Example text and help shown under Launch ID for each platform
     static LAUNCH_HINTS = {
@@ -184,7 +44,7 @@ class ImportController {
         this.steamLookupStatus = document.getElementById('steam-lookup-status');
         // "All Steam games" search drop-down
         this.steamAllRow = document.getElementById('steam-all-row');
-        this.steamSearch = new GameSearchBox({
+        this.steamSearch = this.createSearchBox({
             input: document.getElementById('steam-all-search'),
             results: document.getElementById('steam-all-results'),
             status: document.getElementById('steam-all-status'),
@@ -208,7 +68,7 @@ class ImportController {
         this.epicOwnedSelect = document.getElementById('epic-owned-select');
         this.epicOwnedStatus = document.getElementById('epic-owned-status');
         // Search drop-down for your Epic library
-        this.epicSearch = new GameSearchBox({
+        this.epicSearch = this.createSearchBox({
             input: document.getElementById('epic-owned-search'),
             results: document.getElementById('epic-owned-results'),
             status: document.getElementById('epic-owned-search-status'),
@@ -228,7 +88,7 @@ class ImportController {
         this.battleLookupStatus = document.getElementById('battle-lookup-status');
         // "All Battle.net games" search drop-down (every known Battle.net game)
         this.battleAllRow = document.getElementById('battle-all-row');
-        this.battleSearch = new GameSearchBox({
+        this.battleSearch = this.createSearchBox({
             input: document.getElementById('battle-all-search'),
             results: document.getElementById('battle-all-results'),
             status: document.getElementById('battle-all-status'),
@@ -315,9 +175,9 @@ class ImportController {
     closeModal() {
         this.backdrop.classList.remove('open');
         this.form.reset();
-        this.steamSearch.reset();
-        this.epicSearch.reset();
-        this.battleSearch.reset();
+        this.resetSearchBox(this.steamSearch);
+        this.resetSearchBox(this.epicSearch);
+        this.resetSearchBox(this.battleSearch);
         this.clearPickedGame();
         this.updateLaunchField();
     }
@@ -425,6 +285,152 @@ class ImportController {
         });
         sel.disabled = !list.length;
         document.getElementById(clearButtonId).style.display = list.length ? '' : 'none';
+    }
+
+    // ================================================================
+    // Search drop-downs
+    // A search box with a drop-down of matching games, used for
+    // "All Steam games", "Your Epic library" and "All Battle.net games".
+    // Type to search, then click a game or use the arrow keys and Enter.
+    //   options.input / results / status - the <input>, <ul> and message line
+    //   options.search(query)   -> [{ id, name }] matches
+    //   options.browse()        -> [{ id, name }] shown when you click the box
+    //                              before typing (so it works like a drop-down)
+    //   options.isInstalled(id) -> true / false / null (null = can't tell, no tag)
+    //   options.onPick(game)    -> fills in the form
+    //   options.showIds         -> show each game's ID (handy for Steam editions)
+    //   options.noMatch(query)  -> message when nothing matches
+    // Returns the box's state, which the methods below take as `box`.
+    // ================================================================
+    createSearchBox(options) {
+        const box = {
+            o: options,
+            input: options.input,
+            results: options.results,
+            status: options.status,
+            matches: [], // [{ id, name }] in the drop-down
+            active: -1,  // highlighted row (arrow keys)
+            timer: null
+        };
+        box.input.addEventListener('input', () => {
+            clearTimeout(box.timer);
+            box.timer = setTimeout(() => this.runSearchBox(box), 120);
+        });
+        // Clicking the box opens the list, even before you type
+        box.input.addEventListener('focus', () => this.openSearchBox(box));
+        box.input.addEventListener('click', () => this.openSearchBox(box));
+        box.input.addEventListener('blur', () => setTimeout(() => this.showSearchResults(box, false), 150));
+        box.input.addEventListener('keydown', (event) => this.searchBoxKey(box, event));
+        // mousedown (not click) so it runs before the box loses focus
+        box.results.addEventListener('mousedown', (event) => {
+            const li = event.target.closest('li[data-index]');
+            if (!li) return;
+            event.preventDefault();
+            this.pickSearchResult(box, Number(li.dataset.index));
+        });
+        return box;
+    }
+
+    // Opens the list if it's closed (fills it first if needed)
+    openSearchBox(box) {
+        if (box.input.disabled || !box.results.hidden) return;
+        if (!box.matches.length) this.runSearchBox(box);
+        else this.showSearchResults(box, true);
+    }
+
+    runSearchBox(box) {
+        const query = box.input.value.trim();
+        if (query.length >= 2) box.matches = box.o.search(query);
+        else box.matches = box.o.browse ? box.o.browse() : []; // empty box: the starting list
+        box.active = box.matches.length ? 0 : -1;
+        this.renderSearchResults(box);
+        if (query.length >= 2 && !box.matches.length) ImportController.setStatus(box.status, box.o.noMatch(query), true);
+        else ImportController.setStatus(box.status, '');
+    }
+
+    renderSearchResults(box) {
+        box.results.innerHTML = '';
+        box.matches.forEach((g, i) => {
+            const li = document.createElement('li');
+            li.dataset.index = String(i);
+            li.id = box.results.id + '-option-' + i;
+            li.setAttribute('role', 'option');
+            li.className = i === box.active ? 'active' : '';
+            li.setAttribute('aria-selected', i === box.active ? 'true' : 'false');
+            const name = document.createElement('span');
+            name.className = 'result-name';
+            name.textContent = g.name;
+            li.appendChild(name);
+            // INSTALLED / INSTALL tag, when your installed list is loaded
+            const installed = box.o.isInstalled(g.id);
+            if (installed !== null) {
+                const tag = document.createElement('span');
+                tag.className = 'result-tag ' + (installed ? 'tag-installed' : 'tag-not-installed');
+                tag.textContent = installed ? 'INSTALLED' : 'INSTALL';
+                li.appendChild(tag);
+            }
+            if (box.o.showIds) {
+                const id = document.createElement('span');
+                id.className = 'result-id';
+                id.textContent = g.id;
+                li.appendChild(id);
+            }
+            box.results.appendChild(li);
+        });
+        this.showSearchResults(box, box.matches.length > 0);
+    }
+
+    showSearchResults(box, visible) {
+        box.results.hidden = !visible;
+        box.input.setAttribute('aria-expanded', visible ? 'true' : 'false');
+        if (visible && box.active >= 0) box.input.setAttribute('aria-activedescendant', box.results.id + '-option-' + box.active);
+        else box.input.removeAttribute('aria-activedescendant');
+    }
+
+    // Arrow keys move, Enter picks, Escape closes the list (not the window)
+    searchBoxKey(box, event) {
+        const open = !box.results.hidden && box.matches.length > 0;
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (!open) { this.openSearchBox(box); return; } // first press opens the list
+            if (!box.matches.length) return;
+            const n = box.matches.length;
+            box.active = (box.active + (event.key === 'ArrowDown' ? 1 : -1) + n) % n;
+            this.renderSearchResults(box);
+            const li = box.results.children[box.active];
+            if (li) li.scrollIntoView({ block: 'nearest' });
+        } else if (event.key === 'Enter') {
+            event.preventDefault(); // don't submit the form
+            if (open && box.active >= 0) this.pickSearchResult(box, box.active);
+        } else if (event.key === 'Escape' && open) {
+            event.preventDefault();
+            event.stopPropagation(); // keep the Add Game window open
+            this.showSearchResults(box, false);
+        }
+    }
+
+    pickSearchResult(box, i) {
+        const g = box.matches[i];
+        if (!g) return;
+        box.o.onPick(g);
+        this.resetSearchBox(box);
+    }
+
+    resetSearchBox(box) {
+        clearTimeout(box.timer);
+        box.input.value = '';
+        box.matches = [];
+        box.active = -1;
+        box.results.innerHTML = '';
+        this.showSearchResults(box, false);
+        ImportController.setStatus(box.status, '');
+    }
+
+    // Greys the box out (e.g. before your Epic library is loaded)
+    setSearchBoxEnabled(box, enabled, placeholder) {
+        box.input.disabled = !enabled;
+        box.input.placeholder = placeholder;
+        if (!enabled) this.resetSearchBox(box);
     }
 
     // ================================================================
@@ -562,7 +568,7 @@ class ImportController {
         const owned = this.platformLibrary.requestOwnedEpicGames();
         ImportController.fillSelect(this.epicOwnedSelect, owned,
             'No Epic library loaded yet', 'epic-owned-clear-button', 'Pick a game you own…');
-        this.epicSearch.setEnabled(owned.length > 0, owned.length
+        this.setSearchBoxEnabled(this.epicSearch, owned.length > 0, owned.length
             ? 'Search or pick from your ' + owned.length + ' Epic games…'
             : 'Load your Epic library to search it');
     }

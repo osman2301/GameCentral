@@ -36,12 +36,12 @@ class LaunchController {
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
                 this.endActiveSession();
-                this.checkPendingInstall();
+                this.checkInstall();
             }
         });
         window.addEventListener('focus', this.endActiveSession);
-        window.addEventListener('focus', () => this.checkPendingInstall());
-        setTimeout(() => this.checkPendingInstall(), 0); // also when a page opens
+        window.addEventListener('focus', () => this.checkInstall());
+        setTimeout(() => this.checkInstall(), 0); // also when a page opens
 
         // The big Play button only exists on the Library page
         if (this.playButton) {
@@ -131,7 +131,7 @@ class LaunchController {
     }
 
     // Shows the question if you pressed Install or Uninstall on a game
-    checkPendingInstall() {
+    checkInstall() {
         const pending = LaunchController.loadPendingInstall();
         if (!pending) return;
         const action = pending.action === 'uninstall' ? 'uninstall' : 'install';

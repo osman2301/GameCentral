@@ -1,7 +1,7 @@
 // ================================================================
 // Game
-// One game in your library: its name, platform, Launch ID,
-// play style and play time.
+// One game in your library: its name, platform, Launch ID
+// and play time.
 // ================================================================
 class Game {
     constructor(data) {
@@ -10,8 +10,6 @@ class Game {
         this.title = data.title || '';
         this.platform = data.platform || 'Steam';       // 'Steam' | 'Epic Games' | 'Battle.net'
         this.launchId = data.launchId || '';            // the platform's ID, used by Play
-        this.playStyle = data.playStyle || '';
-        if (data.modes) this.modes = data.modes;        // older saves may have a list of play styles
         // Older saves may be missing these, so fill in defaults
         this.totalMinutes = typeof data.totalMinutes === 'number' ? data.totalMinutes : 0;
         this.lastPlayedAt = typeof data.lastPlayedAt === 'number' ? data.lastPlayedAt : null;
@@ -30,7 +28,7 @@ class Game {
     }
 
     // Is this the same game as another one on the SAME platform?
-    // (The same game on Steam and on Epic counts as two different games.)    
+    // (The same game on Steam and on Epic counts as two different games.)
     // Same platform, and the same name (ignoring capitals and punctuation)
     // or the same Launch ID (ignoring capitals, so Battle.net's "Pro" = "pro").
     sameGame(other) {
