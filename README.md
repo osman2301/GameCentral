@@ -8,159 +8,192 @@ GameCentral is developed using **HTML, CSS, and object-oriented JavaScript**.
 
 ## Features
 
-### 1. Home Page
-- Displays the user's most recently played game.
-- Shows previously played games.
-- Provides navigation between Home, Library, and Discover.
-- Displays game information, including platform, play style, and estimated playtime.
+### Home
+- View recent game activity and previously played games.
+- See game information such as platform and play style.
+- Navigate between Home, Library, and Discover.
 
-### 2. Game Library
-- Stores games from online gaming platforms.
-- Allows users to manually add games.
-- Displays saved games in a centralized library.
-- Allows searching by game title and filtering by platform.
-- Supports removing games from the library.
+### Game Library
+- Manage games from Steam, Epic Games, and Battle.net.
+- Add games manually, including games that are not installed.
+- Search games by title.
+- Filter games by gaming platform.
+- Remove games from the library.
+- Launch supported installed games.
 
-### 3. Import Game Library
-GameCentral allows users to import game information from supported local launcher files.
-
-
-Players can select detected games from the import interface and add them to their central library.
-
-**Note:** The current implementation imports information from files selected on the user's computer. It does not directly authenticate with online gaming accounts or automatically synchronize entire online game libraries.
-
-### 4. Launch Games
-- Allows users to select games from their library.
-- Validates available launch information.
-- Generates platform-specific launch URLs.
-- Supports launch requests through Steam, Epic Games, and Battle.net.
-- Provides warnings when launch information is missing or unavailable.
-- Can direct users to a platform store when direct launching is unavailable.
-
-GameCentral attempts to open the appropriate game launcher. Actual launch success depends on the installed launcher, browser permissions, and valid game information.
-
-### 5. Discover Games
-- Provides a **Surprise Me** feature that randomly selects a game from the user's library.
-- Allows filtering recommendations by play style.
-- Recommends revisiting games that have not been played recently.
-- Provides links to supported gaming storefronts.
-
-### 6. Game Session Tracking
-- Records recent launch activity.
-- Estimates playtime based on the time between launching a game and returning to the browser.
-- Updates game activity and estimated playtime.
+### Add and Import Games
+- Add games by selecting a platform and entering a game title.
+- Search available Steam game listings.
+- Import supported game information from launcher files.
+- Keep track of owned games even if they are not installed.
 
 
-### 7. Local Storage
-GameCentral uses browser `localStorage` to save game information.
+## Discover: Pick Something for Me
 
-Saved data includes:
-- Game title
-- Platform
-- Play style
-- Launch ID
-- Estimated playtime
-- Last played information
+The Discover feature helps players decide what to play based on how they feel and how much time they have available.
+
+Players can use either filter individually or combine both to narrow their game selections.
+
+### I'm Feeling...
+
+Players can choose from eight moods:
+
+- Adventurous
+- Excited
+- Spooked
+- Creative
+- Immersive
+- Competitive
+- Social
+- Relaxed
+
+### How Much Time Do I Have?
+
+Players can choose from four time options:
+
+- 15 Minutes or Less
+- 30 Minutes
+- 1 Hour
+- More Than 1 Hour
+
+### How Filtering Works
+
+GameCentral uses game genres and metadata to identify games that match the selected filters.
+
+- **Mood Only:** Displays games matching the selected mood.
+- **Time Only:** Displays games matching the selected time availability.
+- **Both Filters:** Displays games matching both selections.
+- **No Matches:** Displays a message when no games match the selected filters.
+
+GameCentral uses information from Wikidata to help determine game genres and modes.
+
+Time recommendations are estimated based on game genres rather than actual gameplay duration.
+
+### Surprise Me
+
+The **Surprise Me** feature randomly selects a game from the matching results.
+
+This allows players to quickly choose something to play without browsing their entire library.
+
+## Game Launching
+
+GameCentral supports launching games through their original gaming platforms when valid launch information is available.
+
+- Launch supported installed games.
+- Open platform-specific game launch URLs.
+- Display warnings when games cannot be launched.
+- Track recent launch activity when supported.
 
 
+## Technologies Used
 
-### File Descriptions
+| Technology | Purpose |
+|------------|---------|
+| HTML5 | Application structure |
+| CSS3 | User interface design |
+| JavaScript | Application functionality |
+| Object-Oriented Programming | Organizing game and library logic |
+| jQuery | Interface functionality |
+| Wikidata | Retrieving game genre and mode information |
+| localStorage | Saving game library data |
 
-| File | Description |
-|---|---|
-| `index.html` | Home page |
-| `library.html` | Game library interface |
-| `discover.html` | Game discovery interface |
-| `Game.js` | Game object representation |
-| `CentralLibrary.js` | Central library management |
-| `PlatformLibrary.js` | Platform-specific game information |
-| `ImportController.js` | Game importing functionality |
-| `LaunchController.js` | Game launch coordination |
-| `OriginalPlatform.js` | External launcher integration |
-| `style.css` | Application styling |
-| `README.md` | Project documentation |
-
-## Installation and Setup
+## Getting Started
 
 ### Requirements
-- A modern web browser, such as Chrome, Firefox, Edge, or Safari
+
+- A modern desktop web browser
 - Visual Studio Code (recommended)
-- Live Server extension for VS Code (recommended)
+- Live Server extension for Visual Studio Code (recommended)
 - Git (optional)
 
-No Java, Python, Flask, PHP, or database server is required.
+### Installation
 
-### Step 1: Clone the Repository
+**1. Clone the repository**
 
 ```bash
 git clone https://github.com/osman2301/GameCentral.git
 ```
 
-Navigate into the project:
+**2. Open the project folder**
 
 ```bash
 cd GameCentral
 ```
 
-Alternatively, download the repository as a ZIP file from GitHub.
+**3. Open the project in Visual Studio Code**
 
-### Step 2: Open the Project
+**4. Launch the application**
 
-1. Open Visual Studio Code.
-2. Select **File → Open Folder**.
-3. Open the `GameCentral` folder.
-4. Locate `index.html`.
+Right-click `index.html` and select **Open with Live Server**.
 
-### Step 3: Run the Application
+**5. Start using GameCentral**
 
-Using the Live Server extension:
+Navigate between Home, Library, and Discover.
 
-1. Right-click `index.html`.
-2. Select **Open with Live Server**.
-3. The GameCentral Home page will open in your browser.
+No separate database server or JavaScript build process is required.
 
-You can navigate between Home, Library, and Discover.
-
-A local development server is recommended for consistent browser storage and file-handling behavior.
-
-## How to Use GameCentral
+## How to Use
 
 ### Adding a Game
 
 1. Open GameCentral.
 2. Click **+ Add Game**.
 3. Select Steam, Epic Games, or Battle.net.
-4. Enter the game's name.
-5. Select a play style.
-6. Provide a launch ID when available.
-7. Click **Add Game**.
+4. Enter or select a game title.
+5. Provide any required game information.
+6. Add the game to your library.
 
-The game will be added to the central library.
+Games that are not installed can still be added for tracking purposes.
 
-### Importing Installed Games
+### Importing Games
 
-1. Open the Add Game interface.
-2. Select a supported platform.
-3. Choose the option to load supported local launcher files.
-4. Select the appropriate file or files from your computer.
-5. Review the detected games.
-6. Select a game and add it to GameCentral.
+1. Open the Add Game window.
+2. Choose a gaming platform.
+3. Select an available import option.
+4. Choose the supported files from your computer.
+5. Review and add the detected games.
 
-Imported game information can then be managed through the central library.
+### Filtering Games
 
-### Launching a Game
+1. Navigate to **Discover**.
+2. Select a mood under **I'm Feeling...**.
+3. Select an available time under **How Much Time Do I Have?**.
+4. Click **Filter** to display matching games.
+5. Alternatively, click **Surprise Me** to receive a random recommendation.
 
-1. Open the Library page.
+Either filter can be used independently.
+
+### Launching Games
+
+1. Navigate to your game library.
 2. Select a game.
-3. Click **Play**.
-4. If a supported launch URL is available, GameCentral attempts to open the appropriate launcher.
+3. Click **Play** when available.
+4. Allow the browser to open the associated game launcher if prompted.
 
-The corresponding platform launcher must be installed and configured correctly.
+## Project Structure
 
-### Discovering Games
+| File / Folder | Description |
+|---------------|-------------|
+| `index.html` | Home page |
+| `library.html` | Game library interface |
+| `discover.html` | Mood and time filtering interface |
+| `style.css` | Application styling |
+| `Game.js` | Game model |
+| `CentralLibrary.js` | Game collection and storage management |
+| `PlatformLibrary.js` | Platform-specific game information |
+| `ImportController.js` | Game import functionality |
+| `LaunchController.js` | Game launching functionality |
+| `OriginalPlatform.js` | Platform launch handling |
+| `GameInfo.js` | Game metadata retrieval |
+| `GameFilter.js` | Mood and time filtering logic |
+| `static/` | Static application assets |
+| `README.md` | Project documentation |
 
-1. Open the Discover page.
-2. Use **Surprise Me** to select a random game.
-3. Apply available play-style or unplayed-game filters.
-4. View backlog and recently unplayed game suggestions.
+## Current Limitations
 
+- Game libraries are stored locally in the browser.
+- GameCentral does not currently support cloud synchronization.
+- Game importing depends on supported launcher files.
+- Mood filtering depends on available game metadata.
+- Time availability is estimated using game genres.
+- Game launching depends on the original platform and installation status.
