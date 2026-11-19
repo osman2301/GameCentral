@@ -112,8 +112,9 @@ class GameFilter {
     // "Filter": every game matching the panel's filters.
     // Looks up missing games first when mood or time is used.
     // Resolves to { matches: [{ index, why }], total } or { message } when none match.
-    filterAll() {
-        const filters = this.currentFilters();
+    // filters (optional) - { mood, time } to use instead of what's chosen in the panel
+    filterAll(filters) {
+        filters = filters || this.currentFilters();
         const ready = GameFilter.needsLookup(filters) ? this.info.lookUpMissingGames() : Promise.resolve();
         return ready.then(() => {
             const games = this.library.games;

@@ -27,7 +27,7 @@
     </header>
 
     <div class="app-layout">
-        <!-- ===== DISCOVER PAGE: random pick, backlog ===== -->
+        <!-- ===== DISCOVER PAGE: filters and random pick ===== -->
         <main class="library-main">
             <section class="library-toolbar">
                 <div>
@@ -56,10 +56,8 @@
                     <button class="match-button" id="pick-button">Surprise me</button>
                 </div>
                 <p class="disc-note" id="mood-status"></p> <!-- "Looking up games…" etc. -->
-                <div id="pick-result"></div>
+                <div id="pick-result"></div> <!-- every game until you press Filter or Surprise me -->
             </section>
-
-            <div id="discover-content"></div> <!-- "Worth revisiting", filled in by the script -->
 
             <footer class="library-footer">
                 <span>GameCentral</span>
@@ -381,18 +379,6 @@
         }
 
         // ================================================================
-        // Discover: games not played for a month
-        // ================================================================
-        function renderDiscover() {
-            var el = document.getElementById('discover-content');
-            el.innerHTML = '';
-            var month = 30 * 86400000;
-            [
-                gameSection('Worth revisiting', pickIndexes(function (g) { return g.lastPlayedAt && Date.now() - g.lastPlayedAt > month; }, function (a, b) { return games[b].totalMinutes - games[a].totalMinutes; }, 4), note_played, 'disc-section')
-            ].forEach(function (sec) { if (sec) el.appendChild(sec); });
-        }
-
-        // ================================================================
         // "Pick something for me" (see GameFilter.js): mood and time
         // ================================================================
         var filter = new GameFilter({
@@ -414,14 +400,30 @@
             out.appendChild(p);
         }
 
-        // "Filter": show every game that matches the filters
-        document.getElementById('filter-button').addEventListener('click', function () {
+        // What's showing under the filters:
+        //   null                     - every game (when the page opens)
+        //   { mood, time }           - the filters used for the last "Filter"
+        //   { pickId, why }          - the game "Surprise me" picked
+        var shownFilters = null;
+        var shownPick = null;
+        var drawCount = 0; // so an older, slower draw can't replace a newer one
+
+        // Draws the game list: every game, or the games matching `filters`.
+        // Uses the same GameFilter code as "Filter", so "Any Mood" + "Any Time" = every game.
+        function drawGameList(filters) {
             var out = document.getElementById('pick-result');
-            out.innerHTML = '';
-            filter.filterAll().then(function (result) {
+            var mine = ++drawCount;
+            var ask = filters
+                ? filter.filterAll(filters)
+                : Promise.resolve({ matches: games.map(function (g, i) { return { index: i, why: '' }; }), total: games.length });
+            ask.then(function (result) {
+                if (mine !== drawCount) return;
                 out.innerHTML = '';
+                if (!filters && !result.total) { showPickMessage(out, 'Your library is empty. Click “+ Add Game” to add your first one.'); return; }
                 if (result.message) { showPickMessage(out, result.message); return; }
-                showPickMessage(out, result.matches.length + ' of ' + result.total + ' game' + (result.total === 1 ? '' : 's') + ' match.');
+                showPickMessage(out, filters
+                    ? result.matches.length + ' of ' + result.total + ' game' + (result.total === 1 ? '' : 's') + ' match.'
+                    : 'All ' + result.total + ' game' + (result.total === 1 ? '' : 's') + ' in your library.');
                 var grid = document.createElement('div');
                 grid.className = 'mini-grid';
                 result.matches.forEach(function (m) {
@@ -429,23 +431,53 @@
                 });
                 out.appendChild(grid);
             });
+        }
+
+        // Draws the "Surprise me" card again (e.g. after its button changes to Play)
+        function drawPick() {
+            var out = document.getElementById('pick-result');
+            var i = games.findIndex(function (g) { return g.id === shownPick.pickId; });
+            if (i === -1) { shownPick = null; drawGameList(shownFilters); return; } // game was removed
+            drawCount++;
+            out.innerHTML = '';
+            // Shows why it fits, e.g. "Steam · Action · horror · ~30 min sessions"
+            var card = miniCard(i, note_platform(games[i]) + (shownPick.why ? ' · ' + shownPick.why : ''));
+            card.classList.add('pick-card');
+            out.appendChild(card);
+        }
+
+        // "Filter": show every game that matches the filters
+        document.getElementById('filter-button').addEventListener('click', function () {
+            shownPick = null;
+            shownFilters = filter.currentFilters();
+            drawGameList(shownFilters);
         });
 
         // "Surprise me": show a random game that matches the filters
         document.getElementById('pick-button').addEventListener('click', function () {
             var out = document.getElementById('pick-result');
-            out.innerHTML = '';
+            var mine = ++drawCount;
+            var used = filter.currentFilters();
             filter.pickRandom().then(function (pick) {
-                out.innerHTML = '';
-                if (pick.message) { showPickMessage(out, pick.message); return; }
-                // Shows why it fits, e.g. "Steam · Action · horror · ~30 min sessions"
-                var card = miniCard(pick.index, note_platform(games[pick.index]) + (pick.why ? ' · ' + pick.why : ''));
-                card.classList.add('pick-card');
-                out.appendChild(card);
+                if (mine !== drawCount) return;
+                if (pick.message) {
+                    // Nothing to pick: show the message (a redraw shows the same one)
+                    shownPick = null;
+                    shownFilters = used;
+                    out.innerHTML = '';
+                    showPickMessage(out, pick.message);
+                    return;
+                }
+                shownPick = { pickId: games[pick.index].id, why: pick.why };
+                drawPick();
             });
         });
 
-        renderPage = renderDiscover;
+        // Redraws whatever is showing (all games, the filtered list, or the pick)
+        renderPage = function () {
+            if (shownPick) drawPick();
+            else drawGameList(shownFilters);
+        };
         renderPage();
     </script>
 </body>
